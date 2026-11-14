@@ -36,17 +36,30 @@ Your sky lives in one browser on one device. Nothing backs it up for you.
 - It survives closing the tab, restarting and updates to the game.
 - It does not follow you to another browser or device, and private windows forget it.
 - Clearing browsing data deletes it. Browsers can also clear a site they think is unused; Safari does this after about a week of browsing without a visit. The home-screen app is not under that timer.
-- **Save → Download** is the real backup. Do it after anything you'd hate to redo, and keep the file somewhere else (Files, iCloud, an email to yourself). **Save** also shows whether this browser has agreed to keep your sky, with a link to ask it.
+- **Save → Download** is the real backup. Do it after anything you'd hate to redo, and keep the file somewhere else (Files, iCloud, an email to yourself). **Save** shows when your last backup was, and whether this browser has agreed to keep your sky, with a link to ask it.
+- After a week without a backup, a note at the top of the page reminds you, once a day at most.
+- **Save → History** keeps the last 30 copies of your sky in this browser: one before anything is opened or added, and one about every ten minutes while you play. Bring one back, or save it as a file. History lives in the same browser as your sky, so it undoes mistakes; it is not a backup.
+
+## Google Drive backup (optional)
+
+With a Google client ID set, **Save → Google Drive** keeps a copy of the sky in the player's own Google Drive, in one file named `Goal Galaxy sky.json`, and opens it on their other devices. Goal Galaxy asks only for the `drive.file` permission, which lets it see the files it made itself and nothing else in the Drive. There is still no server: the page goes to Google to sign in and comes back with a pass that lasts about an hour. While the pass lasts, changes are sent a few seconds after they're made; after that the player taps **Reconnect**. If the Drive copy was changed on another device, nothing is overwritten: the player chooses to open it, add it to their sky, or replace it.
+
+Nothing is loaded from Google or sent to it unless a player connects. To turn the feature on for your copy of the game:
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), make a project and enable the **Google Drive API**.
+2. Set up the consent screen (**Google Auth Platform**): app name, your email, audience **External**, and the scope `https://www.googleapis.com/auth/drive.file`. Publish it. This scope is one Google classes as non-sensitive.
+3. Under **Clients**, create a client of type **Web application**. Authorized JavaScript origin: `https://<you>.github.io`. Authorized redirect URI: the game's address exactly, with the slash at the end, such as `https://<you>.github.io/goal-galaxy/`.
+4. Put the client ID (it ends in `.apps.googleusercontent.com`) in `GOOGLE_CLIENT_ID` in `index.html`. A client ID is not a secret.
 
 ## Privacy and hosting
 
-Goal Galaxy is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, nothing is sent anywhere, and there's no account or server. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
+Goal Galaxy is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, and there's no server. Nothing is sent anywhere unless you choose to connect Google Drive, and then only to your own Drive. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
 
 Because it's only static files, it's hosted free on GitHub Pages. To make your own copy, fork this repo and turn on Pages (Settings → Pages → Deploy from branch → `main`, `/ (root)`).
 
 ## Tests
 
-Every pull request runs the game in a real browser at phone size (`.github/workflows/tests.yml`): scoring, worksheets and AI answers, **Add to my sky**, backup and restore, and opening with no connection. A pull request is merged once the check is green. To run them yourself:
+Every pull request runs the game in a real browser at phone size (`.github/workflows/tests.yml`): scoring, worksheets and AI answers, **Add to my sky**, backup and restore, and opening with no connection. Google Drive is tested with the test playing Google's part. To run them yourself:
 
 ```
 cd tests
@@ -54,6 +67,14 @@ npm install
 npx playwright install chromium
 npx playwright test
 ```
+
+## Pull requests merge themselves
+
+`.github/workflows/merge-when-green.yml` merges a pull request once every other check on it has passed, then asks GitHub Pages to publish.
+
+- Only pull requests from branches of this repo, never from forks.
+- To stop one: make it a draft, or add the label `hold`.
+- A pull request that changes a workflow file is left for a person to merge; GitHub doesn't let a workflow merge those.
 
 ## Credits
 

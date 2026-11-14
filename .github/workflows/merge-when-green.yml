@@ -1,0 +1,74 @@
+# Merge when green: a pull request merges itself once every other check on it has passed.
+#
+#   • Only pull requests from branches of this repo, never from forks.
+#   • To stop one from merging: make it a draft, or add the label "hold". Take the label off to let it go.
+#   • A pull request that changes a workflow file (.github/workflows/) is left alone: GitHub doesn't
+#     let a workflow merge those. Merge it by hand once its checks are green.
+#   • Merges are squashed and the branch is deleted.
+#   • A merge made by a workflow doesn't start other workflows, so the last step asks GitHub Pages
+#     to publish.
+name: Merge when green
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  pages: write
+
+concurrency:
+  group: merge-when-green-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    name: Merge when green
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      !contains(github.event.pull_request.labels.*.name, 'hold')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      ME: Merge when green          # this job's own name, left out when the checks are read
+    steps:
+      - name: Leave workflow changes for a person
+        id: scope
+        run: |
+          if gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' | grep -q '^\.github/workflows/'; then
+            echo "::notice::This pull request changes a workflow file. GitHub doesn't let a workflow merge those: merge it by hand once its checks are green."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for the other checks
+        if: steps.scope.outputs.skip != 'true'
+        run: |
+          sleep 20                       # give the other workflows a moment to start
+          start=$SECONDS
+          while :; do
+            runs=$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" --jq "[.check_runs[] | select(.name != \"$ME\") | {name, status, conclusion}]")
+            bad=$(jq -r '[.[] | select(.status == "completed" and (.conclusion | IN("success", "skipped", "neutral") | not)) | .name] | join(", ")' <<<"$runs")
+            waiting=$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")
+            total=$(jq length <<<"$runs")
+            if [ -n "$bad" ]; then echo "::error::Not merging: these checks did not pass: $bad"; exit 1; fi
+            # done when nothing is still running; a pull request with no other checks at all is given a minute for one to appear
+            if [ "$waiting" -eq 0 ] && { [ "$total" -gt 0 ] || [ $((SECONDS - start)) -ge 60 ]; }; then break; fi
+            if [ $((SECONDS - start)) -ge 1500 ]; then echo "::error::Not merging: the checks were still running after 25 minutes."; exit 1; fi
+            sleep 15
+          done
+          echo "Passed: $(jq -r '[.[].name] | join(", ")' <<<"$runs")"
+
+      - name: Merge
+        if: steps.scope.outputs.skip != 'true'
+        run: gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$SHA"
+
+      - name: Publish the site
+        if: steps.scope.outputs.skip != 'true'
+        run: gh api -X POST "repos/$REPO/pages/builds" --jq '.status'

@@ -285,3 +285,179 @@ test("Save explains the backup and how to install", async ({ page }) => {
   await page.getByText("Use it offline, like an app").click();
   await expect(page.locator(".sheet-card")).toContainText("Add to Home Screen");
 });
+
+// ---- History and the backup reminder ----
+test("History keeps a copy before the sky is added to, and brings it back", async ({ page }) => {
+  const errs = errorsOf(page);
+  await plant(page, MINE);
+  await tab(page, "file");
+  await page.locator("#x-text").fill(JSON.stringify(THEIRS));
+  await page.locator("#x-add").click(); await page.locator("#x-add").click();
+  expect((await sky(page)).galaxies.length).toBe(3);
+  await tab(page, "file");
+  await page.getByText("🕓 History").click();
+  const before = page.locator(".hist-row", { hasText: "Before Add to my sky" });
+  await expect(before).toContainText("Gaffer · 2 galaxies · 3 stars · 1 class");
+  await before.locator("[data-back]").click();
+  await expect(before.locator("[data-back]")).toHaveText("Tap again: this replaces your sky");
+  await before.locator("[data-back]").click();
+  await expect(page.locator("#toast")).toContainText("Brought back the copy");
+  const s = await sky(page);
+  expect(s.galaxies.map(g => g.name)).toEqual(["Lighting", "Grip"]);
+  expect(s.classes[0].quests.map(q => q.due)).toEqual([null, null]);
+  await tab(page, "file");                                                  // and the sky that was replaced is in History too
+  await page.getByText("🕓 History").click();
+  await expect(page.locator(".hist-row", { hasText: "Before bringing back a copy" })).toContainText("3 galaxies");
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.locator(".hist-row [data-save]").first().click()]);
+  expect(JSON.parse(fs.readFileSync(await dl.path(), "utf8")).goalGalaxy).toBe(1);
+  expect(errs).toEqual([]);
+});
+
+test("a sky that goes missing is put back from the newest safety copy", async ({ page }) => {
+  await plant(page, MINE);
+  await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });      // the first change of a visit makes a copy
+  await expect.poll(() => page.evaluate(() => safeAll().then(a => a.length))).toBe(1);
+  await page.evaluate(() => localStorage.removeItem("goal-galaxy-v1"));
+  await page.reload();
+  await expect(page.locator("#toast")).toContainText("newest safety copy was put back");
+  const s = await sky(page);
+  expect(s.example).toBe(false);
+  expect(s.galaxies[0].stars[0]).toBe("Light a face ✓");
+});
+
+test("a week without a backup shows a reminder, once a day, until there is one", async ({ page }) => {
+  const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString();
+  await plant(page, MINE);
+  await expect(page.locator("#note")).toBeEmpty();                           // a new sky isn't nagged
+  await page.evaluate(m => localStorage.setItem("goal-galaxy-meta", JSON.stringify(m)), { since: daysAgo(10), changedAt: daysAgo(1) });
+  await page.reload();
+  await expect(page.locator("#note")).toContainText("never been backed up");
+  await page.locator('#note [data-act="later"]').click();
+  await expect(page.locator("#note")).toBeEmpty();
+  await page.reload();
+  await expect(page.locator("#note")).toBeEmpty();                           // not again today
+  await page.evaluate(m => localStorage.setItem("goal-galaxy-meta", JSON.stringify(m)), { since: daysAgo(30), backupAt: daysAgo(8), backupHow: "downloaded file", changedAt: daysAgo(1) });
+  await page.reload();
+  await expect(page.locator("#note")).toContainText("Your last backup was 8 days ago");
+  await page.locator('#note [data-view="file"]').click();
+  await expect(page.locator("#x-last")).toContainText("Last backup:");
+  await Promise.all([page.waitForEvent("download"), page.locator("#x-dl").click()]);
+  await expect(page.locator("#x-last")).toContainText("(downloaded file)");
+  await expect(page.locator("#note")).toBeEmpty();
+});
+
+// ---- Google Drive (Google itself is played by the test) ----
+// One pretend Google account shared by every browser in a test: the sign-in page sends the browser straight
+// back with a pass, and the Drive holds at most one file.
+function pretendGoogle(){
+  const g = { file: null, n: 0, signedOut: false, saves: 0 };
+  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PATCH,OPTIONS" };
+  const json = (route, body, status = 200) => route.fulfill({ status, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(body) });
+  const stamp = () => new Date(Date.UTC(2026, 10, 14, 12, 0, ++g.n)).toISOString();
+  g.attach = async ctx => {
+    await ctx.addInitScript(() => { window.GOAL_GALAXY_GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"; });
+    await ctx.route("https://accounts.google.com/**", route => {
+      const q = new URL(route.request().url()).searchParams;
+      expect(q.get("client_id")).toBe("test-client.apps.googleusercontent.com");
+      expect(q.get("scope")).toBe("https://www.googleapis.com/auth/drive.file");
+      expect(q.get("response_type")).toBe("token");
+      route.fulfill({ status: 302, headers: { location: `${q.get("redirect_uri")}#access_token=pass-${g.n}&token_type=Bearer&expires_in=3599&scope=x&state=${q.get("state")}` } });
+    });
+    await ctx.route("https://www.googleapis.com/**", async route => {
+      const req = route.request(), url = new URL(req.url()), m = req.method();
+      if (m === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+      if (g.signedOut || !/^Bearer pass-/.test(req.headers().authorization || "")) return json(route, { error: "signed out" }, 401);
+      const id = (url.pathname.match(/\/files\/([^/]+)$/) || [])[1];
+      if (m === "GET" && !id) return json(route, { files: g.file ? [{ id: g.file.id, modifiedTime: g.file.modifiedTime }] : [] });
+      if (m === "GET" && (!g.file || id !== g.file.id)) return json(route, { error: "not found" }, 404);
+      if (m === "GET" && url.searchParams.get("alt") === "media") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "application/json" }, body: g.file.body });
+      if (m === "GET") return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime, trashed: false });
+      if (m === "POST"){ const parts = req.postData().split(/\r\n\r\n/); expect(JSON.parse(parts[1].split("\r\n")[0]).name).toBe("Goal Galaxy sky.json");
+        g.file = { id: "file-1", modifiedTime: stamp(), body: parts[2].split(/\r\n--/)[0] }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
+      if (m === "PATCH" && g.file && id === g.file.id){ g.file = { ...g.file, modifiedTime: stamp(), body: req.postData() }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
+      return json(route, { error: "unexpected" }, 400);
+    });
+  };
+  g.sky = () => JSON.parse(g.file.body);
+  return g;
+}
+
+test("Google Drive isn't offered, and Google isn't contacted, until a client ID is set", async ({ page }) => {
+  const calls = []; page.on("request", r => { if (/google/.test(new URL(r.url()).hostname)) calls.push(r.url()); });
+  await plant(page, MINE);
+  await tab(page, "file");
+  await expect(page.locator(".sheet-card")).not.toContainText("Google Drive");
+  await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
+  await page.waitForTimeout(500);
+  expect(calls).toEqual([]);
+});
+
+test("Google Drive: connect, save by itself, and pause when Google signs the page out", async ({ context, page }) => {
+  const errs = []; page.on("pageerror", e => errs.push(String(e)));
+  const google = pretendGoogle(); await google.attach(context);
+  const calls = []; page.on("request", r => { if (/google/.test(new URL(r.url()).hostname)) calls.push(r.url()); });
+  await plant(page, MINE);
+  expect(calls).toEqual([]);                                                 // nothing goes to Google before the player connects
+  await tab(page, "file");
+  await page.getByText("☁️ Google Drive").click();
+  await expect(page.locator("#x-drive")).toContainText("can only see the one file it makes");
+  await page.locator('#x-drive [data-d="connect"]').click();
+  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");   // back from Google, Save is open, the sky has gone up
+  expect(new URL(page.url()).hash).toBe("");
+  expect(google.sky().goal.title).toBe("Gaffer");
+  await expect(page.locator("#x-last")).toContainText("(Google Drive)");
+  await page.locator('.sheet-card [data-close]').click();
+  await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });      // a change is sent a few seconds later
+  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
+  google.signedOut = true;                                                   // about an hour later
+  await page.evaluate(() => { S.galaxies[0].outcomes[1].mastered = true; commit(); });
+  await expect(page.locator("#note")).toContainText("Drive backup is paused", { timeout: 10000 });
+  expect(google.sky().galaxies[0].outcomes[1].mastered).toBe(false);
+  google.signedOut = false;
+  await page.locator('#note [data-act="drive-connect"]').click();            // Reconnect goes to Google and comes back
+  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
+  await page.locator('#x-drive [data-d="save"]').click();
+  await expect.poll(() => google.sky().galaxies[0].outcomes[1].mastered).toBe(true);
+  await page.locator('#x-drive [data-d="off"]').click();
+  await expect(page.locator("#x-drive")).toContainText("Connect Google Drive");
+  expect(errs).toEqual([]);
+});
+
+test("Google Drive: a second device opens the sky, and neither device overwrites the other", async ({ browser }) => {
+  const google = pretendGoogle(), base = test.info().project.use.baseURL;
+  const one = await browser.newContext({ baseURL: base, viewport: { width: 390, height: 844 } }), two = await browser.newContext({ baseURL: base, viewport: { width: 390, height: 844 } });
+  await google.attach(one); await google.attach(two);
+  const p1 = await one.newPage(), p2 = await two.newPage();
+  const connect = async p => { await tab(p, "file"); await p.getByText("☁️ Google Drive").click(); await p.locator('#x-drive [data-d="connect"]').click(); };
+  // the iPad saves its sky to Drive
+  await plant(p1, MINE); await connect(p1);
+  await expect(p1.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
+  // the iMac has no sky yet: it's offered the Drive copy
+  await p2.goto("./"); await connect(p2);
+  await expect(p2.locator("#x-drive")).toContainText("Your Drive has a sky saved");
+  await p2.locator('#x-drive [data-d="open"]').click();
+  await expect(p2.locator("#toast")).toContainText("Opened the sky from your Google Drive");
+  expect((await sky(p2)).galaxies.map(g => g.name)).toEqual(["Lighting", "Grip"]);
+  // the iMac adds a star, and it goes up
+  await p2.evaluate(() => { S.galaxies[1].outcomes.push({ id: "o-new", text: "Rig a flag on a C-stand", mastered: false }); commit(); });
+  await expect.poll(() => google.sky().galaxies[1].outcomes.length, { timeout: 10000 }).toBe(2);
+  const saves = google.saves;
+  // back on the iPad, which hasn't seen that: a change there must not overwrite the iMac's work
+  await p1.locator('.sheet-card [data-close]').click();
+  await p1.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
+  await expect(p1.locator("#note")).toContainText("newer sky from another device", { timeout: 10000 });
+  expect(google.saves).toBe(saves);
+  await p1.locator('#note [data-view="file"]').click();
+  await expect(p1.locator("#x-drive")).toContainText("this browser hasn't opened");
+  await p1.locator('#x-drive [data-d="add"]').click();                        // take the iMac's star, keep the iPad's progress, send the result up
+  await expect(p1.locator("#toast")).toContainText("Added 1 star");
+  const s = await sky(p1);
+  expect(s.galaxies[0].stars[0]).toBe("Light a face ✓");
+  expect(s.galaxies[1].stars).toEqual(["Flag a light", "Rig a flag on a C-stand"]);
+  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered).toBe(true);
+  expect(google.sky().galaxies[1].outcomes.length).toBe(2);
+  // and the copy the iPad had before is in its History
+  await tab(p1, "file"); await p1.getByText("🕓 History").click();
+  await expect(p1.locator(".hist-row", { hasText: "Before adding the Google Drive copy" })).toHaveCount(1);
+  await one.close(); await two.close();
+});
