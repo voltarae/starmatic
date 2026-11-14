@@ -1,0 +1,15 @@
+{
+  "name": "Goal Galaxy",
+  "short_name": "Goal Galaxy",
+  "description": "Set a goal. Light up the galaxies of skills on your way there.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b2725",
+  "theme_color": "#0b2725",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

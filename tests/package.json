@@ -1,0 +1,7 @@
+{
+  "name": "goal-galaxy-tests",
+  "private": true,
+  "description": "Browser tests for Goal Galaxy. Run: npm install && npx playwright install chromium && npx playwright test",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "^1.56.0" }
+}

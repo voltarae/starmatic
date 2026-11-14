@@ -21,13 +21,39 @@ Open **Guide** in the game. You don't have to type a sky in star by star:
 - **Fill in a worksheet by hand.** Download the plain-text worksheet (or fill it in right in the Guide): your goal, a block for each galaxy with its stars, and a class if you want one. Open the filled-in page in the Guide.
 - **Have a class syllabus?** Use **Classes → Add a syllabus**. It reads the pasted text, has its own AI prompt for messy syllabi, and lets you check every quest first.
 
-If you already have a sky, **Add to my sky** (in Guide and in Save) tells you what a file would add, then adds it. Nothing you have is removed or overwritten: a galaxy or class you already have only gains the stars and quests it's missing, so adding the same file twice changes nothing. **Open this file** replaces your sky instead.
+If you already have a sky, **Add to my sky** (in Guide and in Save) tells you what a file would add, then adds it. Nothing you have is removed or overwritten: a galaxy or class you already have only gains the stars and quests it's missing, and due dates for quests that have none, so adding the same file twice changes nothing. **Open this file** replaces your sky instead.
+
+## Offline, and on your home screen
+
+After one visit, Goal Galaxy opens with no connection: a small service worker (`sw.js`) keeps the page, fonts and icons on the device. When there is a connection it fetches the page fresh, so updates arrive the next time you open it.
+
+To use it like an app: on iPhone or iPad, open it in Safari, tap Share, then **Add to Home Screen**. On Android or a computer, use the browser's **Install** or **Add to Home screen** (there's also a button under **Save**). On iPhone and iPad the home-screen app keeps a sky of its own, separate from Safari's: download your file from **Save** first, then open it in the app.
+
+## How safe is my sky?
+
+Your sky lives in one browser on one device. Nothing backs it up for you.
+
+- It survives closing the tab, restarting and updates to the game.
+- It does not follow you to another browser or device, and private windows forget it.
+- Clearing browsing data deletes it. Browsers can also clear a site they think is unused; Safari does this after about a week of browsing without a visit. The home-screen app is not under that timer.
+- **Save → Download** is the real backup. Do it after anything you'd hate to redo, and keep the file somewhere else (Files, iCloud, an email to yourself). **Save** also shows whether this browser has agreed to keep your sky, with a link to ask it.
 
 ## Privacy and hosting
 
-Goal Galaxy is one HTML page plus two fonts. It runs entirely in your browser: your sky is kept in the browser's local storage, nothing is sent anywhere, and there's no account or server. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
+Goal Galaxy is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, nothing is sent anywhere, and there's no account or server. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
 
 Because it's only static files, it's hosted free on GitHub Pages. To make your own copy, fork this repo and turn on Pages (Settings → Pages → Deploy from branch → `main`, `/ (root)`).
+
+## Tests
+
+Every pull request runs the game in a real browser at phone size (`.github/workflows/tests.yml`): scoring, worksheets and AI answers, **Add to my sky**, backup and restore, and opening with no connection. A pull request is merged once the check is green. To run them yourself:
+
+```
+cd tests
+npm install
+npx playwright install chromium
+npx playwright test
+```
 
 ## Credits
 
