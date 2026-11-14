@@ -10,6 +10,11 @@
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0b2725">
 <meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Goal Galaxy">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%230b2725'/%3E%3Crect x='7' y='2' width='2' height='12' fill='%239eddd8'/%3E%3Crect x='2' y='7' width='12' height='2' fill='%239eddd8'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
 <!-- Goal Galaxy by Volta Rae (voltarae.com). Free and open source under the MIT License.
      One self-contained page: everything runs in the visitor's browser. Your sky is kept in this
@@ -1471,9 +1476,10 @@ function readIncoming(text){
   return {courses};
 }
 // Add a sky to the one you have. Nothing of yours is changed or removed:
-// a galaxy or class you already have (same id, or same galaxy name) only gains what it's missing.
+// a galaxy or class you already have (same id, or same galaxy name) only gains what it's missing:
+// stars, quests, and due dates for quests that have none.
 function mergeSky(inc){
-  const n = {galaxies:0, stars:0, classes:0, quests:0, study:0}, gmap = {}, omap = {}, fresh = [];
+  const n = {galaxies:0, stars:0, classes:0, quests:0, dates:0, study:0}, gmap = {}, omap = {}, fresh = [];
   const ids = new Set(S.galaxies.flatMap(g => g.outcomes.map(o => o.id)));
   if (!S.goal.title && inc.goal.title) S.goal = {...inc.goal};
   for (const g of inc.galaxies){
@@ -1496,7 +1502,9 @@ function mergeSky(inc){
     mine.galaxies = [...new Set([...(mine.galaxies || []), ...feeds])];
     mine.categories = mine.categories || [];
     for (const k of c.categories || []) if (!mine.categories.some(x => same(x.name, k.name))) mine.categories.push({...k});
-    for (const q of quests) if (!mine.quests.some(x => x.id === q.id || same(x.title, q.title))){ mine.quests.push(q); n.quests++; }
+    for (const q of quests){ const have = mine.quests.find(x => x.id === q.id || same(x.title, q.title));
+      if (!have){ mine.quests.push(q); n.quests++; }
+      else if (!have.due && q.due){ have.due = q.due; n.dates++; } }       // an empty due date is something missing, so it's filled in
   }
   for (const e of inc.study) if (!S.study.some(x => x.id === e.id)){
     S.study.push({...e, galaxy: gmap[e.galaxy] || "", outcome: e.outcome ? omap[e.outcome] || null : null}); n.study++; }
@@ -1505,7 +1513,7 @@ function mergeSky(inc){
 function mergeCount(inc){ const keep = S; S = JSON.parse(JSON.stringify(S)); try { return mergeSky(inc); } finally { S = keep; } }
 function tally(n){
   const w = (k, one, many) => n[k] ? `${n[k]} ${n[k] === 1 ? one : many}` : "";
-  return [w("galaxies","galaxy","galaxies"), w("stars","star","stars"), w("classes","class","classes"), w("quests","quest","quests"), w("study","study log entry","study log entries")].filter(Boolean).join(", ");
+  return [w("galaxies","galaxy","galaxies"), w("stars","star","stars"), w("classes","class","classes"), w("quests","quest","quests"), w("dates","due date","due dates"), w("study","study log entry","study log entries")].filter(Boolean).join(", ");
 }
 function addClasses(add){
   ensureOwn(() => {
@@ -1570,6 +1578,27 @@ function guideSheet(){
   });
 }
 
+// ---------------- Offline, home screen, and asking the browser to keep the sky ----------------
+// sw.js keeps the page, fonts and icons on the device so the game opens with no connection.
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+let installEvt = null;                                   // Chrome and Android offer an install prompt we can show from Save
+addEventListener("beforeinstallprompt", e => { installEvt = e; });
+addEventListener("appinstalled", () => { installEvt = null; });
+const isApp = () => (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+// Browsers may clear a site's data when space is short or the site looks unused. persist() asks them not to.
+// Some browsers show a permission prompt for it, so it's only asked from a tap, or quietly once installed.
+async function keepLine(el){
+  const st = navigator.storage;
+  if (!st || !st.persisted || !st.persist){ el.textContent = "A downloaded file is the only real backup: this browser can clear a sky it thinks you've stopped using."; return; }
+  let ok = false; try { ok = await st.persisted(); } catch(err){}
+  if (ok){ el.textContent = "🔒 This browser has agreed to keep your sky until you clear it yourself. A downloaded file is still your backup."; return; }
+  el.innerHTML = `This browser can clear a sky it thinks you've stopped using. A downloaded file is your backup. <a href="#" id="x-keep-ask">Ask it to keep my sky</a>`;
+  el.querySelector("#x-keep-ask").onclick = async ev => { ev.preventDefault(); let yes = false; try { yes = await st.persist(); } catch(err){}
+    el.textContent = yes ? "🔒 This browser has agreed to keep your sky until you clear it yourself. A downloaded file is still your backup."
+      : "It said not yet. Browsers usually agree once Goal Galaxy is on your home screen or you've used it for a while. Keep a downloaded file."; };
+}
+if (isApp() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
 // ---------------- Save / open ----------------
 function fileSheet(){
   const has = hasSky();
@@ -1577,8 +1606,14 @@ function fileSheet(){
   openSheet(`
     <p class="kick">Your file</p><h3>Save or open</h3>
     <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back${has ? ", or add another sky to the one you have" : ""}. Syllabus Quest files open too.</p>
+    <p class="sub" id="x-keep" style="margin:0"></p>
     <label>Sky file<textarea id="x-text" rows="7" placeholder="Paste a saved file here to open it…">${esc(text)}</textarea></label>
     <label>Or open a .json file<input id="x-file" type="file" accept=".json,.txt,application/json,text/plain"></label>
+    <details><summary>📲 Use it offline, like an app</summary>
+      <p class="sub">After one visit Goal Galaxy opens with no connection. To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
+      <p class="sub">On iPhone and iPad the home-screen app starts with an empty sky of its own. Download your file here first, then open it in the app.</p>
+      <div class="actions" style="justify-content:flex-start"><button class="plain" id="x-install" hidden>Install Goal Galaxy</button></div>
+    </details>
     <div id="x-err" class="err" role="alert"></div>
     <div class="actions"><button class="plain" data-close="1">Close</button><button class="plain" id="x-copy" ${has?"":"disabled"}>Copy</button><button class="plain" id="x-dl" ${has?"":"disabled"}>Download</button>${has ? `<button class="plain" id="x-open">Open this file</button><button class="fill" id="x-add">Add to my sky</button>` : `<button class="fill" id="x-open">Open this file</button>`}</div>`,
   card => {
@@ -1592,6 +1627,9 @@ function fileSheet(){
       a.download = `goal-galaxy-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
     card.querySelector("#x-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result); fresh(); }; r.readAsText(f); };
     box.oninput = fresh;
+    keepLine(card.querySelector("#x-keep"));
+    const inst = card.querySelector("#x-install");
+    if (installEvt){ inst.hidden = false; inst.onclick = async () => { const ev = installEvt; installEvt = null; inst.hidden = true; try { await ev.prompt(); } catch(err){} }; }
     open.onclick = () => {
       let inc; try { inc = readIncoming(box.value); } catch(err){ return say(err.message, true); }
       if (inc.courses) return addClasses(inc.courses);
