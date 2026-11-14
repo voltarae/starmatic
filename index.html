@@ -176,6 +176,7 @@ label.check{flex-direction:row;align-items:center;gap:.5rem;color:var(--ink);fon
 label.check input{width:auto}
 .actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
 .err{color:var(--late);font-size:.95rem}
+.hist-row{display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;border-top:2px dashed var(--ink);padding:.55rem 0}
 .preview{overflow-x:auto;border:2px solid var(--ink)}
 .preview table{border-collapse:collapse;width:100%;min-width:620px;font-size:.88rem}
 .preview th{text-align:left;font-weight:700;border-bottom:2px solid var(--ink);padding:.35rem}
@@ -734,6 +735,9 @@ function load(){
 function persist(){
   if (S.example) return;
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ toast("This browser won't keep data. Save a file to keep your work."); }
+  touched();
+  if (Date.now() - safeAt > SAFE_EVERY) safeCopy("While you played");
+  driveSoon();
 }
 function snapshot(){ const r = compute(); return {level:r.level, g:Object.fromEntries(S.galaxies.map(g => [g.id, {lv:r.gx[g.id].level, locked:r.gx[g.id].locked}]))}; }
 function commit(){
@@ -802,7 +806,7 @@ function exampleSky(){
 function render(){
   const tabs = [["sky","🌌 Sky"],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
   $("#views").innerHTML = tabs.map(([k,n]) => `<button class="tab" data-view="${k}" aria-pressed="${k===view}">${n}</button>`).join("");
-  $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : "";
+  $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : (driveNote() || backupNote());
   const r = compute();
   $("#game").innerHTML = view === "classes" ? classesView(r) : view === "study" ? studyView(r) : skyView(r);
   const sky = $(".sky"); if (sky) sky.scrollLeft = (sky.scrollWidth - sky.clientWidth) / 2;     // phones: start centered on the goal
@@ -1527,7 +1531,7 @@ function addToSky(btn, text, say){
   let inc; try { inc = readIncoming(text); } catch(err){ return say(err.message, true); }
   if (inc.courses) return addClasses(inc.courses);
   if (!hasSky()) return openSky(inc.sky);
-  if (btn.dataset.armed){ const n = mergeSky(inc.sky); view = "sky"; closeSheet(); commit(); return toast(`🌌 Added ${tally(n)}`); }
+  if (btn.dataset.armed){ safeCopy("Before Add to my sky"); const n = mergeSky(inc.sky); view = "sky"; closeSheet(); commit(); return toast(`🌌 Added ${tally(n)}`); }
   const n = mergeCount(inc.sky), t = tally(n);
   if (!t) return say("Your sky already has everything in this. Nothing to add.", true);
   say(`This adds ${t} to your sky. Nothing you have is removed or overwritten.`, false);
@@ -1599,6 +1603,193 @@ async function keepLine(el){
 }
 if (isApp() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
+// ---------------- Backups: when the last one was, and a nudge when it's been a while ----------------
+// Small notes kept beside the sky: when it last changed, when it was last backed up and how, Drive settings.
+const META_KEY = "goal-galaxy-meta", DAY = 86400000, NUDGE_DAYS = 7;
+const meta = () => { try { return JSON.parse(localStorage.getItem(META_KEY)) || {}; } catch(err){ return {}; } };
+const setMeta = patch => { try { localStorage.setItem(META_KEY, JSON.stringify({...meta(), ...patch})); } catch(err){} };
+const nowISO = () => new Date().toISOString();
+const when = t => new Date(t).toLocaleString(undefined, {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"});
+function backedUp(how){ setMeta({backupAt:nowISO(), backupHow:how}); }
+function touched(){ const m = meta(); setMeta({changedAt:nowISO(), since:m.since || nowISO()}); }
+// A note at the top of the page, at most once a day: no backup for a week (or ever) and the sky has changed since.
+function backupNote(){
+  if (!hasSky()) return "";
+  const m = meta(), from = m.backupAt || m.since;
+  if (!from || m.nudgedOn === todayISO() || (m.backupAt && !(m.changedAt > m.backupAt))) return "";
+  const days = Math.floor((Date.now() - Date.parse(from)) / DAY);
+  if (days < NUDGE_DAYS) return "";
+  const say = m.backupAt ? `Your last backup was ${days} days ago.` : "Your sky has never been backed up.";
+  return `<div class="note"><span>💾 ${say} It lives only in this browser.</span><span class="actions"><button class="plain" data-act="later">Later</button><button class="fill" data-view="file">Back up</button></span></div>`;
+}
+
+// ---------------- History: safety copies of the sky ----------------
+// Like Voltamatic's safety copies. Whole copies of the sky are kept in their own IndexedDB database
+// (goal-galaxy-safe, the last 30): before anything that replaces or adds to the sky, and about every
+// ten minutes of play. Save > History lists them and brings one back. If the sky itself goes missing
+// from this browser while the copies survive, the newest copy is put back at start.
+const SAFE_DB = "goal-galaxy-safe", SAFE_KEEP = 30, SAFE_EVERY = 10 * 60 * 1000;
+let safeAt = 0;
+function safeDb(){
+  return new Promise((done, fail) => {
+    let req; try { req = indexedDB.open(SAFE_DB, 1); } catch(err){ return fail(err); }
+    req.onupgradeneeded = () => req.result.createObjectStore("copies", {keyPath:"id", autoIncrement:true});
+    req.onsuccess = () => done(req.result); req.onerror = () => fail(req.error);
+  });
+}
+async function safeAll(){               // newest first
+  const db = await safeDb();
+  return new Promise((done, fail) => { const r = db.transaction("copies").objectStore("copies").getAll();
+    r.onsuccess = () => { db.close(); done(r.result.sort((a, b) => b.id - a.id)); }; r.onerror = () => { db.close(); fail(r.error); }; });
+}
+// The sky is turned into text right away, so calling this just before a change keeps the sky as it was.
+async function safeCopy(why, sky = S){
+  if (!sky || sky.example || !(sky.galaxies.length || sky.courses.length || sky.study.length)) return;
+  const text = JSON.stringify({goalGalaxy:1, ...sky});
+  const row = {at:nowISO(), why, goal:sky.goal.title, galaxies:sky.galaxies.length, classes:sky.courses.length,
+    stars:sky.galaxies.reduce((n, g) => n + g.outcomes.length, 0), sky:text};
+  safeAt = Date.now();
+  try {
+    const all = await safeAll();
+    const same = all[0] && all[0].sky === text;                      // nothing has changed since the last copy:
+    if (same && why === "While you played") return;                  // keep it, and only rename it when there's a reason to
+    const db = await safeDb();
+    await new Promise((done, fail) => { const tx = db.transaction("copies", "readwrite"), st = tx.objectStore("copies");
+      if (same) st.put({...all[0], at:row.at, why}); else { st.add(row); all.slice(SAFE_KEEP - 1).forEach(c => st.delete(c.id)); }
+      tx.oncomplete = done; tx.onerror = () => fail(tx.error); });
+    db.close();
+  } catch(err){}
+}
+async function historyList(el){
+  let all; try { all = await safeAll(); } catch(err){ el.textContent = "This browser won't keep a history."; return; }
+  if (!all.length){ el.textContent = "No copies yet. The first is made the next time your sky changes."; return; }
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  el.innerHTML = all.map(c => `<div class="hist-row"><span><b>${esc(when(c.at))}</b> · ${esc(c.why)}<br>${esc(c.goal || "No goal yet")} · ${plural(c.galaxies, "galaxy", "galaxies")} · ${plural(c.stars, "star", "stars")} · ${plural(c.classes, "class", "classes")}</span>
+    <span class="actions"><button class="plain" data-save="${c.id}">Save file</button><button class="plain" data-back="${c.id}">Bring back</button></span></div>`).join("");
+  el.querySelectorAll("[data-save]").forEach(b => b.onclick = () => { const c = all.find(x => x.id === +b.dataset.save);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([c.sky], {type:"application/json"}));
+    a.download = `goal-galaxy-${c.at.slice(0, 10)}-copy.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  el.querySelectorAll("[data-back]").forEach(b => b.onclick = () => armed(b, "Tap again: this replaces your sky", () => {
+    const c = all.find(x => x.id === +b.dataset.back); let sky; try { sky = readIncoming(c.sky).sky; } catch(err){ return toast("That copy can't be read."); }
+    safeCopy("Before bringing back a copy"); openSky(sky); toast(`🕓 Brought back the copy from ${when(c.at)}`); }));
+}
+// At start: the sky is gone from this browser but safety copies are still here.
+async function safeRescue(){
+  try { const all = await safeAll(); if (!all.length || localStorage.getItem(KEY)) return;
+    S = readIncoming(all[0].sky).sky; before = snapshot(); persist(); render(); toast("Your sky was missing here, so the newest safety copy was put back.");
+  } catch(err){}
+}
+
+// ---------------- Google Drive backup (optional) ----------------
+// Off until a Google OAuth client ID is set on the next line (README: "Google Drive backup").
+// With one set, Save offers to keep a copy of the sky in the player's own Google Drive, in one file
+// named "Goal Galaxy sky.json". The drive.file permission lets Goal Galaxy see only files it made itself.
+// There is no server: the page goes to Google to sign in and comes back with a pass that lasts about
+// an hour. While the pass lasts, every change is sent up a few seconds later. After that the player
+// taps Reconnect. Nothing is loaded from Google, or sent to it, unless the player connects.
+const GOOGLE_CLIENT_ID = window.GOAL_GALAXY_GOOGLE_CLIENT_ID || "";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file", DRIVE_FILE = "Goal Galaxy sky.json";
+const DRIVE_API = "https://www.googleapis.com/drive/v3/files", DRIVE_UP = "https://www.googleapis.com/upload/drive/v3/files";
+const DRIVE_TOKEN = "goal-galaxy-drive-token", DRIVE_STATE = "goal-galaxy-drive-state";
+const driveOn = () => !!GOOGLE_CLIENT_ID;
+const driveSet = () => (driveOn() && meta().drive) || null;        // {fileId, seen: the Drive file's version this browser last saved or opened, savedAt}
+function driveToken(){ try { const t = JSON.parse(sessionStorage.getItem(DRIVE_TOKEN)); return t && t.exp > Date.now() + 30000 ? t.token : null; } catch(err){ return null; } }
+function driveConnect(){
+  const state = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
+  localStorage.setItem(DRIVE_STATE, state);
+  location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({client_id:GOOGLE_CLIENT_ID,
+    redirect_uri:location.origin + location.pathname.replace(/index\.html$/, ""), response_type:"token", scope:DRIVE_SCOPE, include_granted_scopes:"true", state}));
+}
+// Coming back from Google, the address ends in #access_token=…&state=…
+function driveReturn(){
+  if (!/(^#|&)(access_token|error)=/.test(location.hash)) return "";
+  const p = new URLSearchParams(location.hash.slice(1)), want = localStorage.getItem(DRIVE_STATE);
+  history.replaceState(null, "", location.pathname + location.search); localStorage.removeItem(DRIVE_STATE);
+  if (!driveOn() || !want || p.get("state") !== want) return "";
+  if (!p.get("access_token")) return "refused";
+  sessionStorage.setItem(DRIVE_TOKEN, JSON.stringify({token:p.get("access_token"), exp:Date.now() + (+p.get("expires_in") || 3600) * 1000}));
+  setMeta({drive:{...(meta().drive || {})}});
+  return "connected";
+}
+function driveOff(){ sessionStorage.removeItem(DRIVE_TOKEN); setMeta({drive:null}); driveClash = null; }
+async function driveFetch(url, opts = {}){
+  const out = () => Object.assign(new Error("Google has signed this page out."), {signedOut:true});
+  const token = driveToken(); if (!token) throw out();
+  const r = await fetch(url, {...opts, headers:{Authorization:"Bearer " + token, ...(opts.headers || {})}});
+  if (r.status === 401){ sessionStorage.removeItem(DRIVE_TOKEN); throw out(); }
+  if (!r.ok) throw new Error(`Google Drive answered ${r.status}.`);
+  return r;
+}
+// The sky file in this Drive, or null: {id, modifiedTime}
+async function driveLook(){
+  const st = driveSet();
+  if (st && st.fileId){
+    const r = await fetch(`${DRIVE_API}/${st.fileId}?fields=id,modifiedTime,trashed`, {headers:{Authorization:"Bearer " + (driveToken() || "")}});
+    if (r.ok){ const f = await r.json(); if (!f.trashed) return f; }
+    else if (r.status === 401){ sessionStorage.removeItem(DRIVE_TOKEN); throw Object.assign(new Error("Google has signed this page out."), {signedOut:true}); }
+  }
+  const q = new URLSearchParams({q:`name = '${DRIVE_FILE}' and trashed = false`, fields:"files(id,modifiedTime)", orderBy:"modifiedTime desc", pageSize:"1", spaces:"drive"});
+  return ((await (await driveFetch(`${DRIVE_API}?${q}`)).json()).files || [])[0] || null;
+}
+// Send the sky up. If the Drive copy changed somewhere else since this browser last saw it, nothing is
+// sent and {clash} comes back, unless force is set.
+async function driveSave(force){
+  const text = JSON.stringify({goalGalaxy:1, ...S}), st = driveSet() || {}, there = await driveLook();
+  if (there && !force && st.seen !== there.modifiedTime) return {clash:there};
+  let f;
+  if (there) f = await (await driveFetch(`${DRIVE_UP}/${there.id}?uploadType=media&fields=id,modifiedTime`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:text})).json();
+  else { const edge = "goalgalaxy" + Date.now();
+    const body = `--${edge}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:DRIVE_FILE, mimeType:"application/json"})}\r\n--${edge}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${edge}--`;
+    f = await (await driveFetch(`${DRIVE_UP}?uploadType=multipart&fields=id,modifiedTime`, {method:"POST", headers:{"Content-Type":`multipart/related; boundary=${edge}`}, body})).json(); }
+  setMeta({drive:{fileId:f.id, seen:f.modifiedTime, savedAt:nowISO()}}); backedUp("Google Drive"); driveClash = null;
+  return {saved:f};
+}
+async function driveRead(there){ return readIncoming(await (await driveFetch(`${DRIVE_API}/${there.id}?alt=media`)).text()).sky; }
+function driveSeen(there){ setMeta({drive:{fileId:there.id, seen:there.modifiedTime, savedAt:nowISO()}}); backedUp("Google Drive"); driveClash = null; }
+// After each change, a few seconds later, while connected.
+let driveT = 0, driveClash = null;
+function driveSoon(){
+  if (!driveSet() || !driveToken() || S.example) return;
+  clearTimeout(driveT);
+  driveT = setTimeout(async () => { try { const r = await driveSave(false); if (r.clash && !driveClash){ driveClash = r.clash; render(); } } catch(err){ if (err.signedOut) render(); } }, 4000);
+}
+function driveNote(){
+  const st = driveSet(); if (!st || S.example) return "";
+  if (driveClash) return `<div class="note"><span>☁️ Your Google Drive has a newer sky from another device. Nothing has been overwritten.</span><button class="fill" data-view="file">Choose</button></div>`;
+  const m = meta();
+  if (!driveToken() && hasSky() && m.nudgedOn !== todayISO() && (!st.savedAt || m.changedAt > st.savedAt))
+    return `<div class="note"><span>☁️ Drive backup is paused. Google signs this page out after about an hour.</span><span class="actions"><button class="plain" data-act="later">Later</button><button class="fill" data-act="drive-connect">Reconnect</button></span></div>`;
+  return "";
+}
+// The Google Drive part of the Save sheet.
+async function drivePanel(el, changed){
+  const st = driveSet(), again = () => drivePanel(el, changed);
+  const draw = (text, buttons) => { if (changed) changed(); el.innerHTML = `<p class="sub">${text}</p><div class="actions" style="justify-content:flex-start">${buttons.map(([id, label, fill]) => `<button class="${fill ? "fill" : "plain"}" data-d="${id}">${label}</button>`).join("")}</div>`;
+    const on = (id, fn) => { const b = el.querySelector(`[data-d="${id}"]`); if (b) b.onclick = async () => { b.disabled = true; try { await fn(b); } catch(err){ if (err.signedOut) return again(); el.querySelector("p").textContent = err.message; b.disabled = false; } }; };
+    on("connect", driveConnect);
+    on("off", () => { driveOff(); render(); again(); });
+    on("save", async () => { const r = await driveSave(false); if (r.clash) driveClash = r.clash; again(); });
+    on("force", async () => { await driveSave(true); render(); again(); });
+    on("open", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before opening the Google Drive copy"); driveSeen(there); openSky(sky); toast("☁️ Opened the sky from your Google Drive"); });
+    on("add", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before adding the Google Drive copy"); const n = mergeSky(sky); driveSeen(there); commit(); await driveSave(true); closeSheet(); toast(tally(n) ? `🌌 Added ${tally(n)}` : "☁️ Your sky already had everything in the Drive copy"); });
+  };
+  if (!st) return draw("Keep a copy of your sky in your own Google Drive and open it on your other devices. Goal Galaxy can only see the one file it makes there, named “" + DRIVE_FILE + "”.", [["connect", "Connect Google Drive", true]]);
+  if (!driveToken()) return draw(`Paused${st.savedAt ? `: last saved to your Drive ${esc(when(st.savedAt))}` : ""}. Google signs this page out after about an hour.`, [["off", "Turn off"], ["connect", "Reconnect", true]]);
+  el.innerHTML = `<p class="sub">Checking your Drive…</p>`;
+  let there; try { there = driveClash || await driveLook(); } catch(err){ if (err.signedOut) return again(); return draw(esc(err.message), [["off", "Turn off"], ["connect", "Reconnect", true]]); }
+  if (!there){
+    if (!hasSky()) return draw("Connected. There's no sky in your Drive yet: it will be saved there once you start yours.", [["off", "Turn off"]]);
+    await driveSave(true); render(); return again();
+  }
+  if (st.seen !== there.modifiedTime){            // a copy this browser hasn't opened: another device, or the first time here
+    driveClash = there;
+    return hasSky()
+      ? draw(`Your Drive has a sky saved ${esc(when(there.modifiedTime))} that this browser hasn't opened. Nothing has been overwritten.`, [["off", "Turn off"], ["force", "Replace it with this one"], ["add", "Add it to my sky"], ["open", "Open the Drive copy", true]])
+      : draw(`Your Drive has a sky saved ${esc(when(there.modifiedTime))}.`, [["off", "Turn off"], ["open", "Open the Drive copy", true]]);
+  }
+  draw(`Connected. Saved to your Drive ${esc(when(st.savedAt))}. Changes are sent a few seconds after you make them, until Google signs this page out (about an hour).`, [["off", "Turn off"], ["save", "Save now", true]]);
+}
+
 // ---------------- Save / open ----------------
 function fileSheet(){
   const has = hasSky();
@@ -1607,8 +1798,14 @@ function fileSheet(){
     <p class="kick">Your file</p><h3>Save or open</h3>
     <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back${has ? ", or add another sky to the one you have" : ""}. Syllabus Quest files open too.</p>
     <p class="sub" id="x-keep" style="margin:0"></p>
+    <p class="sub" id="x-last" style="margin:0"></p>
     <label>Sky file<textarea id="x-text" rows="7" placeholder="Paste a saved file here to open it…">${esc(text)}</textarea></label>
     <label>Or open a .json file<input id="x-file" type="file" accept=".json,.txt,application/json,text/plain"></label>
+    ${driveOn() ? `<details ${driveSet() ? "open" : ""}><summary>☁️ Google Drive</summary><div id="x-drive"></div></details>` : ""}
+    <details id="x-hist"><summary>🕓 History</summary>
+      <p class="sub">The last 30 copies of your sky are kept in this browser: one before anything is opened or added, and one about every ten minutes while you play. Bring one back if something goes wrong.</p>
+      <div id="x-hist-list" class="sub"></div>
+    </details>
     <details><summary>📲 Use it offline, like an app</summary>
       <p class="sub">After one visit Goal Galaxy opens with no connection. To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
       <p class="sub">On iPhone and iPad the home-screen app starts with an empty sky of its own. Download your file here first, then open it in the app.</p>
@@ -1621,19 +1818,25 @@ function fileSheet(){
     const say = (t, bad) => { msg.textContent = t; msg.className = bad ? "err" : "sub"; };
     const fresh = () => { disarm(open, "Open this file"); if (add) disarm(add, "Add to my sky"); say("", true); };
     card.querySelector("#x-copy").onclick = async (ev) => {
-      try { await navigator.clipboard.writeText(box.value); ev.target.textContent = "Copied"; } catch(err){ box.focus(); box.select(); ev.target.textContent = "Selected: copy it"; } };
+      try { await navigator.clipboard.writeText(box.value); ev.target.textContent = "Copied"; } catch(err){ box.focus(); box.select(); ev.target.textContent = "Selected: copy it"; }
+      if (box.value === text){ backedUp("copied"); last(); } };
     card.querySelector("#x-dl").onclick = () => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type:"application/json"}));
-      a.download = `goal-galaxy-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+      a.download = `goal-galaxy-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      backedUp("downloaded file"); last(); render(); };
     card.querySelector("#x-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result); fresh(); }; r.readAsText(f); };
     box.oninput = fresh;
     keepLine(card.querySelector("#x-keep"));
+    const last = () => { const m = meta(); card.querySelector("#x-last").textContent = !has ? "" : m.backupAt ? `Last backup: ${when(m.backupAt)} (${m.backupHow}).` : "No backup yet."; };
+    last();
+    card.querySelector("#x-hist").addEventListener("toggle", ev => { if (ev.target.open) historyList(card.querySelector("#x-hist-list")); });
+    if (driveOn()) drivePanel(card.querySelector("#x-drive"), last);
     const inst = card.querySelector("#x-install");
     if (installEvt){ inst.hidden = false; inst.onclick = async () => { const ev = installEvt; installEvt = null; inst.hidden = true; try { await ev.prompt(); } catch(err){} }; }
     open.onclick = () => {
       let inc; try { inc = readIncoming(box.value); } catch(err){ return say(err.message, true); }
       if (inc.courses) return addClasses(inc.courses);
-      return has ? armed(open, "Tap again: this replaces your sky", () => openSky(inc.sky)) : openSky(inc.sky);
+      return has ? armed(open, "Tap again: this replaces your sky", () => { safeCopy("Before opening a file"); openSky(inc.sky); }) : openSky(inc.sky);
     };
     if (add) add.onclick = () => { disarm(open, "Open this file"); addToSky(add, box.value, say); };
   });
@@ -1656,6 +1859,8 @@ document.addEventListener("click", e => {
   if (b.dataset.q){ const q = cur().quests.find(x => x.id === b.dataset.q); if (q) questSheet(q, false); return; }
   if (b.dataset.study){ const s = S.study.find(x => x.id === b.dataset.study); if (s) studySheet(s, false); return; }
   const a = b.dataset.act;
+  if (a === "later"){ setMeta({nudgedOn:todayISO()}); render(); return; }
+  if (a === "drive-connect") return driveConnect();
   if (a === "own") ensureOwn(() => { view = "sky"; render(); galaxyEdit(null); });
   else if (a === "goal") goalSheet();
   else if (a === "new-galaxy") galaxyEdit(null);
@@ -1674,11 +1879,16 @@ let bannerT; function banner(big, small){ const b = $("#banner"); b.innerHTML = 
 
 // ---------------- Start ----------------
 (function start(){
+  const back = driveReturn();            // "connected" when the page has just come back from Google
   S = load() || exampleSky();
   if (!S.example && !S.goal.title && !S.galaxies.length && S.courses.length) view = "classes";
   before = snapshot();
   drawScene();
   render();
+  if (S.example) safeRescue();
+  if (back === "connected") fileSheet();
+  else if (back === "refused") toast("Google Drive wasn't connected.");
+  else if (driveSet() && driveToken() && hasSky()) driveLook().then(there => { if (there && there.modifiedTime !== driveSet().seen){ driveClash = there; render(); } }).catch(() => {});
 })();
 
 </script>
