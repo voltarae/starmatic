@@ -795,7 +795,7 @@ function exampleSky(){
 
 // ---------------- Drawing: the top tabs ----------------
 function render(){
-  const tabs = [["sky","🌌 Sky"],["classes","📚 Classes"],["study","📖 Study log"],["file","💾 Save"]];
+  const tabs = [["sky","🌌 Sky"],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
   $("#views").innerHTML = tabs.map(([k,n]) => `<button class="tab" data-view="${k}" aria-pressed="${k===view}">${n}</button>`).join("");
   $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : "";
   const r = compute();
@@ -809,7 +809,7 @@ function skyView(r){
     ${goalCard(r)}
     <div class="empty"><h3>🌌 Your sky is empty</h3>
       <p style="margin:0">Add a galaxy for each skill your goal needs. For a cinematographer that could be Camera, Lighting, Composition, Color and Set Life. Then add your classes and log your study to light them up.</p>
-      <button class="teal" data-act="new-galaxy">＋ Add a galaxy</button></div>`;
+      <div class="bar-row"><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button><button class="plain" data-view="guide">🧭 Build it with AI or a worksheet</button></div></div>`;
   return `
     ${goalCard(r)}
     <section class="box">
@@ -1320,39 +1320,284 @@ function studySheet(e, isNew){
   });
 }
 
+// ---------------- Things coming in: a saved sky, a class, an AI's answer, a worksheet ----------------
+const GOAL_PROMPT = `Help me build my learning map for a game called Goal Galaxy.
+First ask me up to five short questions, one at a time: my goal, why it matters to me, what I can already do, how much time I have each week, and any classes, jobs, licenses or certificates on the way. Then reply with only JSON, in this shape:
+{"goalGalaxy":1,"goal":{"title":"Cinematographer","why":"One sentence, in my words"},
+"galaxies":[{"name":"Lighting","emoji":"💡","color":"Orange","target":40,"after":{"galaxy":"Camera","level":10},"stars":["Light a subject with three-point lighting"]}],
+"classes":[{"name":"Stage 1: Basics","code":"PATH 1","galaxies":["Lighting"],"categories":[{"name":"Drills","weight":60},{"name":"Capstone","weight":40}],"quests":[{"title":"Light one face five ways","category":"Drills","due":null,"points":20,"star":"Light a subject with three-point lighting"}]}]}
+- galaxies: the 4 to 12 skills my goal really needs, in the order I should learn them. name: 14 characters or fewer. color: Teal, Blue, Pink, Violet, Orange or Green.
+- target: 1 to 100, how deep I need to go in that skill (30 is working knowledge, 60 is professional).
+- after: the galaxy that has to reach a level before this one opens, or null where I start. Start me with two or three open galaxies, and put no more than three galaxies at each step of the path.
+- stars: 5 to 10 per galaxy. Each is one thing I will be able to do, starting with a verb, that someone could watch me do. No "understand" or "know about".
+- classes: optional stages of self-study. Each quest is a drill or a real-world step with a clear finish line. Its "star" copies one star's text exactly, and its category matches a category name exactly. Use null for dates.
+- If my goal has official steps (an exam, a license, a union, an employer's requirements), include them only when you are sure of them. Otherwise write a quest that tells me to look them up.
+- Don't invent facts about me. If I haven't told you something, ask.
+
+MY GOAL:
+`;
+const WORKSHEET = `GOAL GALAXY WORKSHEET
+Fill in after each colon, then open this page in Goal Galaxy under Guide.
+Lines that start with # are notes and are skipped.
+Copy a GALAXY block for every skill you need.
+
+GOAL:
+WHY:
+
+# A galaxy is one skill your goal needs.
+# TARGET is how deep to go, 1 to 100 (30 = working knowledge, 60 = professional).
+# OPENS AFTER is the galaxy and level that unlock this one, like: Camera 10
+# Leave OPENS AFTER empty for the galaxies you start with.
+# A star is one thing you will be able to do. Start it with a verb.
+
+GALAXY:
+EMOJI:
+TARGET: 40
+OPENS AFTER:
+STARS:
+-
+-
+-
+-
+-
+
+GALAXY:
+EMOJI:
+TARGET: 40
+OPENS AFTER:
+STARS:
+-
+-
+-
+-
+-
+
+GALAXY:
+EMOJI:
+TARGET: 40
+OPENS AFTER:
+STARS:
+-
+-
+-
+-
+-
+
+# Optional. A class is a real course, or a stage you set for yourself.
+# FEEDS lists the galaxies it lights, with commas between them.
+# Each quest is one line. Only the title is needed:
+# - title | points | due date as YYYY-MM-DD | the star it lights (copy its words)
+
+CLASS:
+CODE:
+FEEDS:
+QUESTS:
+-
+-
+-
+`;
+const hasSky = () => !S.example && !!(S.galaxies.length || S.courses.length || S.study.length);
+const same = (a, b) => String(a||"").trim().toLowerCase() === String(b||"").trim().toLowerCase();
+
+// The JSON inside an answer, even with words or ``` fences around it
+function jsonIn(text){
+  const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(text.slice(a, b + 1)); } catch(e){ return null; }
+}
+// A filled-in worksheet: KEY: value lines, with lists under STARS: and QUESTS:
+function readWorksheet(text){
+  const d = {goal:{title:"", why:""}, galaxies:[], classes:[]};
+  const bullet = /^([-•*▪◦●☐□]|\[\s?\]|\d{1,2}[.)])\s*/;
+  const keys = /^(goal|why|galaxy|emoji|colou?r|target|opens\s+after|after|stars|class|code|teacher|instructor|term|feeds|quests)\s*:\s*(.*)$/i;
+  let g = null, c = null, list = null;
+  const item = t => { t = t.trim(); if (!t) return;
+    if (list === "stars" && g) g.stars.push(t);
+    else if (list === "quests" && c){ const [title, points, due, star] = t.split("|").map(x => x.trim());
+      if (title) c.quests.push({title, points:+points > 0 ? +points : 100, due:due||null, star:star||null}); } };
+  for (const raw of text.split(/\r?\n/)){
+    const l = raw.trim(); if (!l || l[0] === "#") continue;
+    if (list && bullet.test(l)){ item(l.replace(bullet, "")); continue; }
+    const m = l.match(keys);
+    if (!m){ if (list) item(l); continue; }
+    const k = m[1].toLowerCase().replace(/\s+/g, " "), v = m[2].trim(); list = null;
+    if (k === "goal") d.goal.title = v;
+    else if (k === "why") d.goal.why = v;
+    else if (k === "galaxy"){ c = null; g = v ? {name:v, stars:[]} : null; if (g) d.galaxies.push(g); }
+    else if (k === "class"){ g = null; c = v ? {name:v, quests:[], feeds:[]} : null; if (c) d.classes.push(c); }
+    else if (k === "stars"){ if (g){ list = "stars"; item(v); } }
+    else if (k === "quests"){ if (c){ list = "quests"; item(v); } }
+    else if (g && k === "emoji") g.emoji = v;
+    else if (g && (k === "color" || k === "colour")) g.color = v ? v[0].toUpperCase() + v.slice(1).toLowerCase() : "";
+    else if (g && k === "target") g.target = +v || 40;
+    else if (g && (k === "opens after" || k === "after")) g.after = v || null;
+    else if (c && k === "code") c.code = v;
+    else if (c && (k === "teacher" || k === "instructor")) c.instructor = v;
+    else if (c && k === "term") c.term = v;
+    else if (c && k === "feeds") c.feeds = v.split(/[,;]/).map(x => x.trim()).filter(Boolean);
+  }
+  return d.goal.title || d.galaxies.length || d.classes.length ? d : null;
+}
+// Hand-written and AI-written skies name things instead of using ids:
+// "stars" as plain lines, "after" and a class's galaxies by galaxy name, a quest's "star" by its words.
+function friendly(d){
+  const gals = (Array.isArray(d.galaxies) ? d.galaxies : []).filter(g => g && g.name).map(g => ({...g,
+    id: typeof g.id === "string" && g.id ? g.id : newId(),
+    outcomes: (Array.isArray(g.outcomes) ? g.outcomes : Array.isArray(g.stars) ? g.stars : [])
+      .map(o => typeof o === "string" ? {id:newId(), text:o.trim()} : o).filter(o => o && o.text)}));
+  const gid = x => x == null ? null : (gals.find(g => g.id === x) || gals.find(g => same(g.name, x)) || {}).id || null;
+  gals.forEach(g => {
+    const a = g.after, ref = typeof a === "string" ? {galaxy:a.replace(/[\s,:]*(level\s*)?\d+\s*$/i, ""), level:(a.match(/(\d+)\s*$/) || [])[1]} : a;
+    const id = ref ? gid(ref.id) || gid(ref.galaxy) || gid(ref.name) : null;
+    g.after = id && id !== g.id ? {id, level:+ref.level || 10} : null;
+  });
+  const stars = gals.flatMap(g => g.outcomes);
+  const sid = x => typeof x === "string" && x ? (stars.find(o => o.id === x) || stars.find(o => same(o.text, x)) || {}).id || null : null;
+  const courses = (Array.isArray(d.courses) ? d.courses : Array.isArray(d.classes) ? d.classes : []).filter(c => c && Array.isArray(c.quests)).map(c => ({...c,
+    galaxies: [...new Set((Array.isArray(c.galaxies) ? c.galaxies : Array.isArray(c.feeds) ? c.feeds : []).map(gid).filter(Boolean))],
+    quests: c.quests.filter(Boolean).map(q => ({...q, outcome: sid(q.outcome) || sid(q.star)}))}));
+  const goal = typeof d.goal === "string" ? {title:d.goal, why:typeof d.why === "string" ? d.why : ""} : d.goal;
+  return {...d, goal, galaxies:gals, courses};
+}
+function readIncoming(text){
+  text = String(text || "").trim();
+  if (!text) throw new Error("Paste a file, an AI's answer or a filled-in worksheet first.");
+  const data = jsonIn(text) || readWorksheet(text);
+  if (!data) throw new Error("That isn't a Goal Galaxy file or worksheet. Paste the whole thing, starting with { or GOAL:");
+  if (data.goalGalaxy || data.goal || Array.isArray(data.galaxies)) return {sky: normalize({...friendly(data), example:false})};
+  const list = Array.isArray(data.courses) ? data.courses : Array.isArray(data.classes) ? data.classes : [data];       // Syllabus Quest file, or one class
+  const courses = list.map(raw => { try { return courseFrom(raw); } catch(e){ return null; } }).filter(Boolean);
+  if (!courses.length) throw new Error("No sky or classes were found in that.");
+  return {courses};
+}
+// Add a sky to the one you have. Nothing of yours is changed or removed:
+// a galaxy or class you already have (same id, or same galaxy name) only gains what it's missing.
+function mergeSky(inc){
+  const n = {galaxies:0, stars:0, classes:0, quests:0, study:0}, gmap = {}, omap = {}, fresh = [];
+  const ids = new Set(S.galaxies.flatMap(g => g.outcomes.map(o => o.id)));
+  if (!S.goal.title && inc.goal.title) S.goal = {...inc.goal};
+  for (const g of inc.galaxies){
+    let mine = S.galaxies.find(x => x.id === g.id) || S.galaxies.find(x => same(x.name, g.name));
+    if (!mine){ mine = {...g, after:null, outcomes:[]}; S.galaxies.push(mine); fresh.push([mine, g]); n.galaxies++; }
+    gmap[g.id] = mine.id;
+    for (const o of g.outcomes){
+      let have = mine.outcomes.find(x => x.id === o.id) || mine.outcomes.find(x => same(x.text, o.text));
+      if (!have){ have = {...o, id: ids.has(o.id) ? newId() : o.id}; mine.outcomes.push(have); ids.add(have.id); n.stars++; }
+      else if (o.mastered) have.mastered = true;
+      omap[o.id] = have.id;
+    }
+  }
+  for (const [mine, g] of fresh){ const id = g.after && gmap[g.after.id]; if (id && id !== mine.id) mine.after = {id, level:g.after.level}; }
+  for (const c of inc.courses){
+    const feeds = [...new Set((c.galaxies || []).map(id => gmap[id]).filter(Boolean))];
+    const quests = c.quests.map(q => ({...q, outcome: q.outcome ? omap[q.outcome] || null : null}));
+    const mine = S.courses.find(x => x.id === c.id);
+    if (!mine){ S.courses.push({...c, galaxies:feeds, quests}); n.classes++; n.quests += quests.length; continue; }
+    mine.galaxies = [...new Set([...(mine.galaxies || []), ...feeds])];
+    mine.categories = mine.categories || [];
+    for (const k of c.categories || []) if (!mine.categories.some(x => same(x.name, k.name))) mine.categories.push({...k});
+    for (const q of quests) if (!mine.quests.some(x => x.id === q.id || same(x.title, q.title))){ mine.quests.push(q); n.quests++; }
+  }
+  for (const e of inc.study) if (!S.study.some(x => x.id === e.id)){
+    S.study.push({...e, galaxy: gmap[e.galaxy] || "", outcome: e.outcome ? omap[e.outcome] || null : null}); n.study++; }
+  return n;
+}
+function mergeCount(inc){ const keep = S; S = JSON.parse(JSON.stringify(S)); try { return mergeSky(inc); } finally { S = keep; } }
+function tally(n){
+  const w = (k, one, many) => n[k] ? `${n[k]} ${n[k] === 1 ? one : many}` : "";
+  return [w("galaxies","galaxy","galaxies"), w("stars","star","stars"), w("classes","class","classes"), w("quests","quest","quests"), w("study","study log entry","study log entries")].filter(Boolean).join(", ");
+}
+function addClasses(add){
+  ensureOwn(() => {
+    for (const c of add){ S.courses = S.courses.filter(x => x.id !== c.id); S.courses.push(c); activeCourse = c.id; }
+    view = "classes"; closeSheet(); commit(); toast(`${add.length === 1 ? "Class" : add.length + " classes"} added. Connect ${add.length === 1 ? "it" : "them"} to your galaxies.`);
+  });
+}
+function openSky(sky){ S = sky; before = snapshot(); activeCourse = null; view = "sky"; persist(); closeSheet(); render(); toast("🌌 Sky opened"); }
+// "Add to my sky": the first tap says what would be added, the second adds it.
+function addToSky(btn, text, say){
+  let inc; try { inc = readIncoming(text); } catch(err){ return say(err.message, true); }
+  if (inc.courses) return addClasses(inc.courses);
+  if (!hasSky()) return openSky(inc.sky);
+  if (btn.dataset.armed){ const n = mergeSky(inc.sky); view = "sky"; closeSheet(); commit(); return toast(`🌌 Added ${tally(n)}`); }
+  const n = mergeCount(inc.sky), t = tally(n);
+  if (!t) return say("Your sky already has everything in this. Nothing to add.", true);
+  say(`This adds ${t} to your sky. Nothing you have is removed or overwritten.`, false);
+  btn.dataset.armed = "1"; btn.textContent = "Tap again to add";
+}
+function disarm(btn, label){ delete btn.dataset.armed; btn.textContent = label; }
+
+// ---------------- Guide: build a sky with AI or a worksheet ----------------
+function guideSheet(){
+  const label = hasSky() ? "Add to my sky" : "Open in my sky";
+  openSheet(`
+    <p class="kick">Guide</p><h3>Build a sky with AI or a worksheet</h3>
+    <p style="margin:0">You don't have to type a sky in star by star. Map your goal with an AI assistant or on a worksheet, then bring it to the box at the bottom.</p>
+    <details open><summary>✨ Let an AI map your goal</summary>
+      <p class="sub">Copy this prompt into Claude or another AI assistant and add your goal at the end. It asks a few questions, then answers with your sky. Paste its whole answer below.</p>
+      <div class="prompt" id="gd-prompt"></div>
+      <div class="actions" style="justify-content:flex-start;margin-top:.5rem"><button class="plain" id="gd-copy">Copy the prompt</button></div>
+    </details>
+    <details><summary>📝 Fill in a worksheet by hand</summary>
+      <p class="sub">A plain page of text: your goal, a block for each galaxy and its stars, and a class if you want one. Print it, fill it in with any notes app, or fill it in right here.</p>
+      <div class="actions" style="justify-content:flex-start"><button class="plain" id="gd-ws-dl">Download the worksheet</button><button class="plain" id="gd-ws-here">Fill it in here</button></div>
+    </details>
+    <details><summary>📚 Have a class syllabus?</summary>
+      <p class="sub">Classes have their own door. It reads the syllabus (with an AI prompt for messy ones) and lets you check every quest before it's added.</p>
+      <div class="actions" style="justify-content:flex-start"><button class="plain" id="gd-syl">Add a syllabus</button></div>
+    </details>
+    <label>The AI's answer, your worksheet, or a saved sky<textarea id="gd-text" rows="8" placeholder="Paste it here…"></textarea></label>
+    <label>Or open a file<input id="gd-file" type="file" accept=".txt,.md,.json,text/plain,application/json"></label>
+    <div id="gd-msg" class="sub" role="status"></div>
+    <div class="actions"><button class="plain" data-close="1">Close</button><button class="fill" id="gd-go">${label}</button></div>`,
+  card => {
+    const box = card.querySelector("#gd-text"), go = card.querySelector("#gd-go"), msg = card.querySelector("#gd-msg");
+    const say = (t, bad) => { msg.textContent = t; msg.className = bad ? "err" : "sub"; };
+    const fresh = () => { disarm(go, label); say("", false); };
+    card.querySelector("#gd-prompt").textContent = GOAL_PROMPT + "[what you want to become or be able to do]";
+    card.querySelector("#gd-copy").onclick = async (e) => {
+      try { await navigator.clipboard.writeText(GOAL_PROMPT); e.target.textContent = "Copied"; }
+      catch(err){ const r = document.createRange(); r.selectNodeContents(card.querySelector("#gd-prompt")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); e.target.textContent = "Selected: copy it"; }
+    };
+    card.querySelector("#gd-ws-dl").onclick = () => {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([WORKSHEET], {type:"text/plain"}));
+      a.download = "goal-galaxy-worksheet.txt"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+    card.querySelector("#gd-ws-here").onclick = () => { if (!box.value.trim()) box.value = WORKSHEET; box.rows = 16; box.focus(); fresh(); };
+    card.querySelector("#gd-syl").onclick = () => ensureOwn(() => { view = "classes"; render(); importSheet(); });
+    card.querySelector("#gd-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result).slice(0, 600000); fresh(); }; r.readAsText(f); };
+    box.oninput = fresh;
+    go.onclick = () => addToSky(go, box.value, say);
+  });
+}
+
 // ---------------- Save / open ----------------
 function fileSheet(){
-  const has = !S.example && (S.galaxies.length || S.courses.length || S.study.length);
+  const has = hasSky();
   const text = has ? JSON.stringify({goalGalaxy:1, ...S}) : "";
   openSheet(`
     <p class="kick">Your file</p><h3>Save or open</h3>
-    <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back. Syllabus Quest files open too.</p>
+    <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back${has ? ", or add another sky to the one you have" : ""}. Syllabus Quest files open too.</p>
     <label>Sky file<textarea id="x-text" rows="7" placeholder="Paste a saved file here to open it…">${esc(text)}</textarea></label>
-    <label>Or open a .json file<input id="x-file" type="file" accept=".json,application/json,text/plain"></label>
+    <label>Or open a .json file<input id="x-file" type="file" accept=".json,.txt,application/json,text/plain"></label>
     <div id="x-err" class="err" role="alert"></div>
-    <div class="actions"><button class="plain" data-close="1">Close</button><button class="plain" id="x-copy" ${has?"":"disabled"}>Copy</button><button class="plain" id="x-dl" ${has?"":"disabled"}>Download</button><button class="fill" id="x-open">Open this file</button></div>`,
+    <div class="actions"><button class="plain" data-close="1">Close</button><button class="plain" id="x-copy" ${has?"":"disabled"}>Copy</button><button class="plain" id="x-dl" ${has?"":"disabled"}>Download</button>${has ? `<button class="plain" id="x-open">Open this file</button><button class="fill" id="x-add">Add to my sky</button>` : `<button class="fill" id="x-open">Open this file</button>`}</div>`,
   card => {
-    card.querySelector("#x-copy").onclick = async (ev) => { const t = $("#x-text");
-      try { await navigator.clipboard.writeText(t.value); ev.target.textContent = "Copied"; } catch(err){ t.focus(); t.select(); ev.target.textContent = "Selected: copy it"; } };
+    const box = card.querySelector("#x-text"), open = card.querySelector("#x-open"), add = card.querySelector("#x-add"), msg = card.querySelector("#x-err");
+    const say = (t, bad) => { msg.textContent = t; msg.className = bad ? "err" : "sub"; };
+    const fresh = () => { disarm(open, "Open this file"); if (add) disarm(add, "Add to my sky"); say("", true); };
+    card.querySelector("#x-copy").onclick = async (ev) => {
+      try { await navigator.clipboard.writeText(box.value); ev.target.textContent = "Copied"; } catch(err){ box.focus(); box.select(); ev.target.textContent = "Selected: copy it"; } };
     card.querySelector("#x-dl").onclick = () => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type:"application/json"}));
       a.download = `goal-galaxy-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
-    card.querySelector("#x-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $("#x-text").value = String(r.result); }; r.readAsText(f); };
-    const open = card.querySelector("#x-open");
+    card.querySelector("#x-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result); fresh(); }; r.readAsText(f); };
+    box.oninput = fresh;
     open.onclick = () => {
-      let data; try { data = JSON.parse($("#x-text").value); } catch(err){ return $("#x-err").textContent = "That isn't a Goal Galaxy file. Paste the whole file, starting with {"; }
-      if (data && data.goalGalaxy){
-        const go = () => { S = normalize({...data, example:false}); before = snapshot(); activeCourse = null; persist(); closeSheet(); render(); toast("🌌 Sky opened"); };
-        return has ? armed(open, "Tap again: this replaces your sky", go) : go();
-      }
-      const list = Array.isArray(data && data.courses) ? data.courses : [data];       // Syllabus Quest file, or one class
-      const add = list.map(raw => { try { return courseFrom(raw); } catch(e){ return null; } }).filter(Boolean);
-      if (!add.length) return $("#x-err").textContent = "No sky or classes were found in that file.";
-      ensureOwn(() => {
-        for (const c of add){ S.courses = S.courses.filter(x => x.id !== c.id); S.courses.push(c); activeCourse = c.id; }
-        view = "classes"; closeSheet(); commit(); toast(`${add.length === 1 ? "Class" : add.length + " classes"} added. Connect ${add.length === 1 ? "it" : "them"} to your galaxies.`);
-      });
+      let inc; try { inc = readIncoming(box.value); } catch(err){ return say(err.message, true); }
+      if (inc.courses) return addClasses(inc.courses);
+      return has ? armed(open, "Tap again: this replaces your sky", () => openSky(inc.sky)) : openSky(inc.sky);
     };
+    if (add) add.onclick = () => { disarm(open, "Open this file"); addToSky(add, box.value, say); };
   });
 }
 
@@ -1364,7 +1609,7 @@ document.addEventListener("click", e => {
   const gEl = t.closest("[data-g]");
   if (gEl && !t.closest(".sheet-card")){ openGalaxy(gEl.dataset.g); return; }
   const v = t.closest("[data-view]");
-  if (v && !t.closest(".sheet-card")){ e.preventDefault(); if (v.dataset.view === "file") fileSheet(); else { view = v.dataset.view; render(); scrollTo({top:0}); } return; }
+  if (v && !t.closest(".sheet-card")){ e.preventDefault(); if (v.dataset.view === "file") fileSheet(); else if (v.dataset.view === "guide") guideSheet(); else { view = v.dataset.view; render(); scrollTo({top:0}); } return; }
   const b = t.closest("button"); if (!b || b.closest(".sheet-card") && !b.dataset.close) return;
   if (b.dataset.close) return closeSheet();
   if (b.dataset.course){ activeCourse = b.dataset.course; render(); return; }

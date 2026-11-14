@@ -13,6 +13,16 @@ A learning game by [Volta Rae](https://voltarae.com). Set a goal, like *Cinemato
 - **Study log**: self-study (20 XP an hour), workshops (30 XP an hour), certificates (250 XP more).
 - **Your level**: each time a galaxy levels up you earn XP equal to its new level; level L to L+1 takes (L+3) × 25, Skyrim's own formula.
 
+## Build a sky with AI or a worksheet
+
+Open **Guide** in the game. You don't have to type a sky in star by star:
+
+- **Let an AI map your goal.** Copy the prompt into Claude or another AI assistant and add your goal at the end. It asks a few questions, then answers with a sky: galaxies in the order to learn them, stars you can be seen doing, and optional stages of quests. Paste its whole answer into the Guide.
+- **Fill in a worksheet by hand.** Download the plain-text worksheet (or fill it in right in the Guide): your goal, a block for each galaxy with its stars, and a class if you want one. Open the filled-in page in the Guide.
+- **Have a class syllabus?** Use **Classes → Add a syllabus**. It reads the pasted text, has its own AI prompt for messy syllabi, and lets you check every quest first.
+
+If you already have a sky, **Add to my sky** (in Guide and in Save) tells you what a file would add, then adds it. Nothing you have is removed or overwritten: a galaxy or class you already have only gains the stars and quests it's missing, so adding the same file twice changes nothing. **Open this file** replaces your sky instead.
+
 ## Privacy and hosting
 
 Goal Galaxy is one HTML page plus two fonts. It runs entirely in your browser: your sky is kept in the browser's local storage, nothing is sent anywhere, and there's no account or server. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
