@@ -1,6 +1,6 @@
 {
-  "name": "Goal Galaxy",
-  "short_name": "Goal Galaxy",
+  "name": "Starmatic",
+  "short_name": "Starmatic",
   "description": "Set a goal. Light up the galaxies of skills on your way there.",
   "start_url": "./",
   "scope": "./",

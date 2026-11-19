@@ -1,4 +1,4 @@
-// Goal Galaxy in a real browser. Each test gets a fresh browser profile, so it starts on the example sky.
+// Starmatic in a real browser. Each test gets a fresh browser profile, so it starts on the example sky.
 const { test, expect } = require("@playwright/test");
 const fs = require("fs"), path = require("path");
 const { serve, ROOT } = require("./serve.js");
@@ -108,9 +108,9 @@ test("Guide shows the AI prompt and a worksheet to fill in", async ({ page }) =>
   await page.locator("#gd-ws-here").click();
   await expect(page.locator("#gd-text")).toHaveValue(/^GOAL GALAXY WORKSHEET/);
   await page.locator("#gd-go").click();                                     // a blank worksheet has nothing in it
-  await expect(page.locator("#gd-msg")).toContainText("isn't a Goal Galaxy file or worksheet");
+  await expect(page.locator("#gd-msg")).toContainText("isn't a Starmatic file or worksheet");
   const [dl] = await Promise.all([page.waitForEvent("download"), page.locator("#gd-ws-dl").click()]);
-  expect(dl.suggestedFilename()).toBe("goal-galaxy-worksheet.txt");
+  expect(dl.suggestedFilename()).toBe("starmatic-worksheet.txt");
 });
 
 test("a filled-in worksheet becomes a sky", async ({ page }) => {
@@ -216,7 +216,7 @@ test("Open this file replaces my sky only after a second tap; a class file just 
   await tab(page, "file");
   await page.locator("#x-text").fill("hello");
   await page.locator("#x-open").click();
-  await expect(page.locator("#x-err")).toContainText("isn't a Goal Galaxy file");
+  await expect(page.locator("#x-err")).toContainText("isn't a Starmatic file");
 });
 
 test("a downloaded backup brings the whole sky back in another browser", async ({ page, browser }) => {
@@ -226,7 +226,7 @@ test("a downloaded backup brings the whole sky back in another browser", async (
   const mine = await sky(page);
   await tab(page, "file");
   const [dl] = await Promise.all([page.waitForEvent("download"), page.locator("#x-dl").click()]);
-  expect(dl.suggestedFilename()).toMatch(/^goal-galaxy-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(dl.suggestedFilename()).toMatch(/^starmatic-\d{4}-\d{2}-\d{2}\.json$/);
   const file = fs.readFileSync(await dl.path(), "utf8");
   expect(JSON.parse(file).goalGalaxy).toBe(1);
 
@@ -257,7 +257,7 @@ test("opens with no connection after the first visit, sky and all", async ({ bro
   await expect(page.locator(".views .tab")).toHaveCount(5);
   expect((await sky(page)).goal).toBe("Gaffer");
   expect(await page.evaluate(() => fetch("fonts/bebas-neue-latin-400-normal.woff2").then(r => r.ok))).toBe(true);
-  expect(await page.evaluate(() => fetch("manifest.webmanifest").then(r => r.json()).then(m => m.name))).toBe("Goal Galaxy");
+  expect(await page.evaluate(() => fetch("manifest.webmanifest").then(r => r.json()).then(m => m.name))).toBe("Starmatic");
   expect(errs).toEqual([]);
   await ctx.close();
 });
@@ -266,7 +266,7 @@ test("can be put on a home screen: manifest, icons, and everything the offline c
   await page.goto("./");
   const href = await page.locator('link[rel="manifest"]').getAttribute("href");
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, href), "utf8"));
-  expect(manifest).toMatchObject({ name: "Goal Galaxy", start_url: "./", scope: "./", display: "standalone" });
+  expect(manifest).toMatchObject({ name: "Starmatic", start_url: "./", scope: "./", display: "standalone" });
   const size = file => { const b = fs.readFileSync(path.join(ROOT, file)); expect(b.subarray(1, 4).toString()).toBe("PNG"); return `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`; };
   for (const icon of manifest.icons) expect(size(icon.src)).toBe(icon.sizes);
   expect(manifest.icons.map(i => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
@@ -372,7 +372,7 @@ function pretendGoogle(){
       if (m === "GET" && (!g.file || id !== g.file.id)) return json(route, { error: "not found" }, 404);
       if (m === "GET" && url.searchParams.get("alt") === "media") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "application/json" }, body: g.file.body });
       if (m === "GET") return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime, trashed: false });
-      if (m === "POST"){ const parts = req.postData().split(/\r\n\r\n/); expect(JSON.parse(parts[1].split("\r\n")[0]).name).toBe("Goal Galaxy sky.json");
+      if (m === "POST"){ const parts = req.postData().split(/\r\n\r\n/); expect(JSON.parse(parts[1].split("\r\n")[0]).name).toBe("Starmatic sky.json");
         g.file = { id: "file-1", modifiedTime: stamp(), body: parts[2].split(/\r\n--/)[0] }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
       if (m === "PATCH" && g.file && id === g.file.id){ g.file = { ...g.file, modifiedTime: stamp(), body: req.postData() }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
       return json(route, { error: "unexpected" }, 400);
@@ -420,6 +420,29 @@ test("Google Drive: connect, save by itself, and pause when Google signs the pag
   await expect.poll(() => google.sky().galaxies[0].outcomes[1].mastered).toBe(true);
   await page.locator('#x-drive [data-d="off"]').click();
   await expect(page.locator("#x-drive")).toContainText("Connect Google Drive");
+  expect(errs).toEqual([]);
+});
+
+test("offline: changes save on the device and go to Google Drive when the connection is back", async ({ context, page }) => {
+  const errs = []; page.on("pageerror", e => errs.push(String(e)));
+  const google = pretendGoogle(); await google.attach(context);
+  await plant(page, MINE);
+  await tab(page, "file");
+  await page.getByText("☁️ Google Drive").click();
+  await page.locator('#x-drive [data-d="connect"]').click();
+  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
+  await page.locator('.sheet-card [data-close]').click();
+  const saves = google.saves;
+  await context.setOffline(true);
+  await expect(page.locator("#toast")).toContainText("Offline");
+  await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
+  await expect(page.locator("#note")).toContainText("You're offline. Everything is saved on this device, and your latest changes go to your Google Drive");
+  await page.waitForTimeout(5000);
+  expect(google.saves).toBe(saves);                                          // nothing tried while offline
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("goal-galaxy-v1")).galaxies[0].outcomes[0].mastered)).toBe(true);     // but it's kept on the device
+  await context.setOffline(false);
+  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
+  await expect(page.locator("#note")).not.toContainText("offline");
   expect(errs).toEqual([]);
 });
 
