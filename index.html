@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Goal Galaxy</title>
+<title>Starmatic</title>
 <meta name="description" content="Set a goal, like Cinematographer. Every class you take and every hour you study earns XP that lights up the galaxies of skills on your way there.">
-<meta property="og:title" content="Goal Galaxy">
+<meta property="og:title" content="Starmatic">
 <meta property="og:description" content="Set a goal. Light up the galaxies of skills on your way there.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0b2725">
@@ -14,9 +14,9 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Goal Galaxy">
+<meta name="apple-mobile-web-app-title" content="Starmatic">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%230b2725'/%3E%3Crect x='7' y='2' width='2' height='12' fill='%239eddd8'/%3E%3Crect x='2' y='7' width='12' height='2' fill='%239eddd8'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
-<!-- Goal Galaxy by Volta Rae (voltarae.com). Free and open source under the MIT License.
+<!-- Starmatic by Volta Rae (voltarae.com). Free and open source under the MIT License.
      One self-contained page: everything runs in the visitor's browser. Your sky is kept in this
      browser (localStorage) and can be saved to / opened from a .json file. Nothing is sent anywhere,
      and nothing loads from other sites except the two fonts beside this file. -->
@@ -206,7 +206,7 @@ details summary{cursor:pointer;font-weight:700}
 @keyframes glow{50%{opacity:.8}}
 @media (prefers-reduced-motion:reduce){.swarm{display:none}}
 
-/* ---- Goal Galaxy additions ---- */
+/* ---- Starmatic additions ---- */
 .views{display:flex;gap:.5rem;flex-wrap:wrap;padding-block:.9rem 0}
 .views .tab{font-size:1rem}
 .goalcard{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1rem}
@@ -266,7 +266,7 @@ details summary{cursor:pointer;font-weight:700}
   <div class="hero">
     <div class="hero-text">
       <p class="kick">🎮 A learning game · by Volta Rae</p>
-      <h1><span>Goal Galaxy</span></h1>
+      <h1><span>Starmatic</span></h1>
       <p class="lede">Set a goal, like Cinematographer. Every skill on the way is a galaxy. Your classes and the hours you study earn XP that lights up its stars, and each galaxy that levels up raises your own level.</p>
     </div>
     <div class="scene" id="scene" aria-hidden="true"></div>
@@ -623,7 +623,7 @@ function courseSheet(c){
 }
 
 // =====================================================================
-// Goal Galaxy: the sky of skills
+// Starmatic: the sky of skills
 // =====================================================================
 // How it plays (like Skyrim's skills):
 // - Your GOAL (say, Cinematographer) sits at the top of the sky.
@@ -1330,7 +1330,7 @@ function studySheet(e, isNew){
 }
 
 // ---------------- Things coming in: a saved sky, a class, an AI's answer, a worksheet ----------------
-const GOAL_PROMPT = `Help me build my learning map for a game called Goal Galaxy.
+const GOAL_PROMPT = `Help me build my learning map for a game called Starmatic.
 First ask me up to five short questions, one at a time: my goal, why it matters to me, what I can already do, how much time I have each week, and any classes, jobs, licenses or certificates on the way. Then reply with only JSON, in this shape:
 {"goalGalaxy":1,"goal":{"title":"Cinematographer","why":"One sentence, in my words"},
 "galaxies":[{"name":"Lighting","emoji":"💡","color":"Orange","target":40,"after":{"galaxy":"Camera","level":10},"stars":["Light a subject with three-point lighting"]}],
@@ -1346,7 +1346,7 @@ First ask me up to five short questions, one at a time: my goal, why it matters 
 MY GOAL:
 `;
 const WORKSHEET = `GOAL GALAXY WORKSHEET
-Fill in after each colon, then open this page in Goal Galaxy under Guide.
+Fill in after each colon, then open this page in Starmatic under Guide.
 Lines that start with # are notes and are skipped.
 Copy a GALAXY block for every skill you need.
 
@@ -1472,7 +1472,7 @@ function readIncoming(text){
   text = String(text || "").trim();
   if (!text) throw new Error("Paste a file, an AI's answer or a filled-in worksheet first.");
   const data = jsonIn(text) || readWorksheet(text);
-  if (!data) throw new Error("That isn't a Goal Galaxy file or worksheet. Paste the whole thing, starting with { or GOAL:");
+  if (!data) throw new Error("That isn't a Starmatic file or worksheet. Paste the whole thing, starting with { or GOAL:");
   if (data.goalGalaxy || data.goal || Array.isArray(data.galaxies)) return {sky: normalize({...friendly(data), example:false})};
   const list = Array.isArray(data.courses) ? data.courses : Array.isArray(data.classes) ? data.classes : [data];       // Syllabus Quest file, or one class
   const courses = list.map(raw => { try { return courseFrom(raw); } catch(e){ return null; } }).filter(Boolean);
@@ -1573,7 +1573,7 @@ function guideSheet(){
     };
     card.querySelector("#gd-ws-dl").onclick = () => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([WORKSHEET], {type:"text/plain"}));
-      a.download = "goal-galaxy-worksheet.txt"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+      a.download = "starmatic-worksheet.txt"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
     card.querySelector("#gd-ws-here").onclick = () => { if (!box.value.trim()) box.value = WORKSHEET; box.rows = 16; box.focus(); fresh(); };
     card.querySelector("#gd-syl").onclick = () => ensureOwn(() => { view = "classes"; render(); importSheet(); });
     card.querySelector("#gd-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result).slice(0, 600000); fresh(); }; r.readAsText(f); };
@@ -1599,7 +1599,7 @@ async function keepLine(el){
   el.innerHTML = `This browser can clear a sky it thinks you've stopped using. A downloaded file is your backup. <a href="#" id="x-keep-ask">Ask it to keep my sky</a>`;
   el.querySelector("#x-keep-ask").onclick = async ev => { ev.preventDefault(); let yes = false; try { yes = await st.persist(); } catch(err){}
     el.textContent = yes ? "🔒 This browser has agreed to keep your sky until you clear it yourself. A downloaded file is still your backup."
-      : "It said not yet. Browsers usually agree once Goal Galaxy is on your home screen or you've used it for a while. Keep a downloaded file."; };
+      : "It said not yet. Browsers usually agree once Starmatic is on your home screen or you've used it for a while. Keep a downloaded file."; };
 }
 if (isApp() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
@@ -1668,7 +1668,7 @@ async function historyList(el){
     <span class="actions"><button class="plain" data-save="${c.id}">Save file</button><button class="plain" data-back="${c.id}">Bring back</button></span></div>`).join("");
   el.querySelectorAll("[data-save]").forEach(b => b.onclick = () => { const c = all.find(x => x.id === +b.dataset.save);
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([c.sky], {type:"application/json"}));
-    a.download = `goal-galaxy-${c.at.slice(0, 10)}-copy.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+    a.download = `starmatic-${c.at.slice(0, 10)}-copy.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
   el.querySelectorAll("[data-back]").forEach(b => b.onclick = () => armed(b, "Tap again: this replaces your sky", () => {
     const c = all.find(x => x.id === +b.dataset.back); let sky; try { sky = readIncoming(c.sky).sky; } catch(err){ return toast("That copy can't be read."); }
     safeCopy("Before bringing back a copy"); openSky(sky); toast(`🕓 Brought back the copy from ${when(c.at)}`); }));
@@ -1683,12 +1683,12 @@ async function safeRescue(){
 // ---------------- Google Drive backup (optional) ----------------
 // Off until a Google OAuth client ID is set on the next line (README: "Google Drive backup").
 // With one set, Save offers to keep a copy of the sky in the player's own Google Drive, in one file
-// named "Goal Galaxy sky.json". The drive.file permission lets Goal Galaxy see only files it made itself.
+// named "Starmatic sky.json". The drive.file permission lets Starmatic see only files it made itself.
 // There is no server: the page goes to Google to sign in and comes back with a pass that lasts about
 // an hour. While the pass lasts, every change is sent up a few seconds later. After that the player
 // taps Reconnect. Nothing is loaded from Google, or sent to it, unless the player connects.
-const GOOGLE_CLIENT_ID = window.GOAL_GALAXY_GOOGLE_CLIENT_ID || "";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file", DRIVE_FILE = "Goal Galaxy sky.json";
+const GOOGLE_CLIENT_ID = window.STARMATIC_GOOGLE_CLIENT_ID || window.GOAL_GALAXY_GOOGLE_CLIENT_ID || "";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file", DRIVE_FILE = "Starmatic sky.json";
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files", DRIVE_UP = "https://www.googleapis.com/upload/drive/v3/files";
 const DRIVE_TOKEN = "goal-galaxy-drive-token", DRIVE_STATE = "goal-galaxy-drive-state";
 const driveOn = () => !!GOOGLE_CLIENT_ID;
@@ -1748,13 +1748,17 @@ async function driveRead(there){ return readIncoming(await (await driveFetch(`${
 function driveSeen(there){ setMeta({drive:{fileId:there.id, seen:there.modifiedTime, savedAt:nowISO()}}); backedUp("Google Drive"); driveClash = null; }
 // After each change, a few seconds later, while connected.
 let driveT = 0, driveClash = null;
+// With no connection nothing is tried: the sky is already saved on this device, and the change is
+// sent when the connection comes back ("online" below), or the next time the game opens.
+const drivePending = () => { const st = driveSet(); return !!st && !S.example && (!st.savedAt || meta().changedAt > st.savedAt); };
 function driveSoon(){
-  if (!driveSet() || !driveToken() || S.example) return;
+  if (!driveSet() || !driveToken() || S.example || !navigator.onLine) return;
   clearTimeout(driveT);
   driveT = setTimeout(async () => { try { const r = await driveSave(false); if (r.clash && !driveClash){ driveClash = r.clash; render(); } } catch(err){ if (err.signedOut) render(); } }, 4000);
 }
 function driveNote(){
   const st = driveSet(); if (!st || S.example) return "";
+  if (!navigator.onLine) return `<div class="note"><span>📴 You're offline. Everything is saved on this device${drivePending() ? ", and your latest changes go to your Google Drive when you're back online" : ""}.</span></div>`;
   if (driveClash) return `<div class="note"><span>☁️ Your Google Drive has a newer sky from another device. Nothing has been overwritten.</span><button class="fill" data-view="file">Choose</button></div>`;
   const m = meta();
   if (!driveToken() && hasSky() && m.nudgedOn !== todayISO() && (!st.savedAt || m.changedAt > st.savedAt))
@@ -1773,7 +1777,7 @@ async function drivePanel(el, changed){
     on("open", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before opening the Google Drive copy"); driveSeen(there); openSky(sky); toast("☁️ Opened the sky from your Google Drive"); });
     on("add", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before adding the Google Drive copy"); const n = mergeSky(sky); driveSeen(there); commit(); await driveSave(true); closeSheet(); toast(tally(n) ? `🌌 Added ${tally(n)}` : "☁️ Your sky already had everything in the Drive copy"); });
   };
-  if (!st) return draw("Keep a copy of your sky in your own Google Drive and open it on your other devices. Goal Galaxy can only see the one file it makes there, named “" + DRIVE_FILE + "”.", [["connect", "Connect Google Drive", true]]);
+  if (!st) return draw("Keep a copy of your sky in your own Google Drive and open it on your other devices. Starmatic can only see the one file it makes there, named “" + DRIVE_FILE + "”.", [["connect", "Connect Google Drive", true]]);
   if (!driveToken()) return draw(`Paused${st.savedAt ? `: last saved to your Drive ${esc(when(st.savedAt))}` : ""}. Google signs this page out after about an hour.`, [["off", "Turn off"], ["connect", "Reconnect", true]]);
   el.innerHTML = `<p class="sub">Checking your Drive…</p>`;
   let there; try { there = driveClash || await driveLook(); } catch(err){ if (err.signedOut) return again(); return draw(esc(err.message), [["off", "Turn off"], ["connect", "Reconnect", true]]); }
@@ -1796,7 +1800,7 @@ function fileSheet(){
   const text = has ? JSON.stringify({goalGalaxy:1, ...S}) : "";
   openSheet(`
     <p class="kick">Your file</p><h3>Save or open</h3>
-    <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back${has ? ", or add another sky to the one you have" : ""}. Syllabus Quest files open too.</p>
+    <p style="margin:0">Your sky stays in this browser. To keep a backup or move to another device, download your file (or copy it into a note or an email to yourself). Open it here to bring it back${has ? ", or add another sky to the one you have" : ""}. Goal Galaxy and Syllabus Quest files open too.</p>
     <p class="sub" id="x-keep" style="margin:0"></p>
     <p class="sub" id="x-last" style="margin:0"></p>
     <label>Sky file<textarea id="x-text" rows="7" placeholder="Paste a saved file here to open it…">${esc(text)}</textarea></label>
@@ -1807,9 +1811,9 @@ function fileSheet(){
       <div id="x-hist-list" class="sub"></div>
     </details>
     <details><summary>📲 Use it offline, like an app</summary>
-      <p class="sub">After one visit Goal Galaxy opens with no connection. To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
+      <p class="sub">After one visit Starmatic opens with no connection, and everything you do offline is saved on this device.${driveOn() ? " With Google Drive connected, your changes are sent there when you're back online." : ""} To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
       <p class="sub">On iPhone and iPad the home-screen app starts with an empty sky of its own. Download your file here first, then open it in the app.</p>
-      <div class="actions" style="justify-content:flex-start"><button class="plain" id="x-install" hidden>Install Goal Galaxy</button></div>
+      <div class="actions" style="justify-content:flex-start"><button class="plain" id="x-install" hidden>Install Starmatic</button></div>
     </details>
     <div id="x-err" class="err" role="alert"></div>
     <div class="actions"><button class="plain" data-close="1">Close</button><button class="plain" id="x-copy" ${has?"":"disabled"}>Copy</button><button class="plain" id="x-dl" ${has?"":"disabled"}>Download</button>${has ? `<button class="plain" id="x-open">Open this file</button><button class="fill" id="x-add">Add to my sky</button>` : `<button class="fill" id="x-open">Open this file</button>`}</div>`,
@@ -1822,7 +1826,7 @@ function fileSheet(){
       if (box.value === text){ backedUp("copied"); last(); } };
     card.querySelector("#x-dl").onclick = () => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type:"application/json"}));
-      a.download = `goal-galaxy-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      a.download = `starmatic-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       backedUp("downloaded file"); last(); render(); };
     card.querySelector("#x-file").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { box.value = String(r.result); fresh(); }; r.readAsText(f); };
     box.oninput = fresh;
@@ -1888,8 +1892,11 @@ let bannerT; function banner(big, small){ const b = $("#banner"); b.innerHTML = 
   if (S.example) safeRescue();
   if (back === "connected") fileSheet();
   else if (back === "refused") toast("Google Drive wasn't connected.");
-  else if (driveSet() && driveToken() && hasSky()) driveLook().then(there => { if (there && there.modifiedTime !== driveSet().seen){ driveClash = there; render(); } }).catch(() => {});
+  else if (driveSet() && driveToken() && hasSky()) driveLook().then(there => { if (there && there.modifiedTime !== driveSet().seen){ driveClash = there; render(); } else if (drivePending()) driveSoon(); }).catch(() => {});
 })();
+// Losing and finding the connection. The sky is saved on this device either way.
+addEventListener("offline", () => { render(); toast("📴 Offline. Everything still saves on this device."); });
+addEventListener("online", () => { render(); if (drivePending() && !driveClash){ driveSoon(); if (driveToken()) toast("☁️ Back online. Sending your changes to Google Drive."); } });
 
 </script>
 </body>

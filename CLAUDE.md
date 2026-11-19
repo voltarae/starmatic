@@ -1,6 +1,6 @@
-# Goal Galaxy: read this first
+# Starmatic: read this first
 
-Goal Galaxy is a learning game: set a goal, light up the galaxies of skills on the way.
+Starmatic (it was called Goal Galaxy) is a learning game: set a goal, light up the galaxies of skills on the way.
 It lives at voltarae.github.io/goal-galaxy. Volta works from an iPad; explain things in plain words.
 
 ## How it's built
@@ -11,6 +11,10 @@ It lives at voltarae.github.io/goal-galaxy. Volta works from an iPad; explain th
   (a test fails if you forget).
 - No server and no build step. A player's sky lives in their browser's localStorage
   (`goal-galaxy-v1`), with safety copies in IndexedDB (`goal-galaxy-safe`).
+- Inside the code the old name stays: the storage keys (`goal-galaxy-…`), the `goalGalaxy:1` mark in
+  sky files and the test file name. Renaming them would strand players' skies.
+- Offline, every change is saved on the device. With Google Drive connected, changes made offline go up
+  when the connection is back (the `online` event), or the next time the game opens.
 - Goals are build-your-own. Don't add preset skies to the game.
 - Google Drive backup is optional and off until `GOOGLE_CLIENT_ID` is set in `index.html`.
   Nothing may be loaded from Google, or sent to it, before a player connects.

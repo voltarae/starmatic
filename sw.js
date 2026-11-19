@@ -1,4 +1,4 @@
-// Goal Galaxy offline. After one visit the page, its fonts and its icons are kept on this device.
+// Starmatic offline. After one visit the page, its fonts and its icons are kept on this device.
 //  - The page itself is fetched fresh whenever there's a connection, so an update shows up the next
 //    time the game is opened. With no connection, or a very slow one, the kept copy opens instead.
 //  - Fonts, icons and the manifest are served from the kept copy and refreshed in the background.
@@ -43,7 +43,7 @@ async function page(req){
   } catch (err) {}
   const copy = await cache.match("./");
   if (copy) return copy;
-  return net.catch(() => new Response("Goal Galaxy needs a connection the first time it opens.", {status: 503, headers: {"Content-Type": "text/plain"}}));
+  return net.catch(() => new Response("Starmatic needs a connection the first time it opens.", {status: 503, headers: {"Content-Type": "text/plain"}}));
 }
 // Everything else: the kept copy right away, refreshed in the background.
 async function kept(req){

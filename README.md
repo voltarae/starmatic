@@ -1,6 +1,8 @@
-# Goal Galaxy
+# Starmatic
 
 A learning game by [Volta Rae](https://voltarae.com). Set a goal, like *Cinematographer*. Every skill on the way is a galaxy in your sky. Your classes and the hours you study earn XP that lights up its stars, and every galaxy that levels up raises your own level, the way skills level you up in Skyrim.
+
+Starmatic was called Goal Galaxy. Goal Galaxy (and Syllabus Quest) files open in it as they are.
 
 **Play it:** https://voltarae.github.io/goal-galaxy/
 
@@ -25,7 +27,7 @@ If you already have a sky, **Add to my sky** (in Guide and in Save) tells you wh
 
 ## Offline, and on your home screen
 
-After one visit, Goal Galaxy opens with no connection: a small service worker (`sw.js`) keeps the page, fonts and icons on the device. When there is a connection it fetches the page fresh, so updates arrive the next time you open it.
+After one visit, Starmatic opens with no connection: a small service worker (`sw.js`) keeps the page, fonts and icons on the device. When there is a connection it fetches the page fresh, so updates arrive the next time you open it. Everything you do offline is saved on the device, and with Google Drive connected, those changes go up to Drive as soon as the connection is back.
 
 To use it like an app: on iPhone or iPad, open it in Safari, tap Share, then **Add to Home Screen**. On Android or a computer, use the browser's **Install** or **Add to Home screen** (there's also a button under **Save**). On iPhone and iPad the home-screen app keeps a sky of its own, separate from Safari's: download your file from **Save** first, then open it in the app.
 
@@ -42,7 +44,7 @@ Your sky lives in one browser on one device. Nothing backs it up for you.
 
 ## Google Drive backup (optional)
 
-With a Google client ID set, **Save → Google Drive** keeps a copy of the sky in the player's own Google Drive, in one file named `Goal Galaxy sky.json`, and opens it on their other devices. Goal Galaxy asks only for the `drive.file` permission, which lets it see the files it made itself and nothing else in the Drive. There is still no server: the page goes to Google to sign in and comes back with a pass that lasts about an hour. While the pass lasts, changes are sent a few seconds after they're made; after that the player taps **Reconnect**. If the Drive copy was changed on another device, nothing is overwritten: the player chooses to open it, add it to their sky, or replace it.
+With a Google client ID set, **Save → Google Drive** keeps a copy of the sky in the player's own Google Drive, in one file named `Starmatic sky.json`, and opens it on their other devices. Starmatic asks only for the `drive.file` permission, which lets it see the files it made itself and nothing else in the Drive. There is still no server: the page goes to Google to sign in and comes back with a pass that lasts about an hour. While the pass lasts, changes are sent a few seconds after they're made; after that the player taps **Reconnect**. If the Drive copy was changed on another device, nothing is overwritten: the player chooses to open it, add it to their sky, or replace it.
 
 Nothing is loaded from Google or sent to it unless a player connects. To turn the feature on for your copy of the game:
 
@@ -53,7 +55,7 @@ Nothing is loaded from Google or sent to it unless a player connects. To turn th
 
 ## Privacy and hosting
 
-Goal Galaxy is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, and there's no server. Nothing is sent anywhere unless you choose to connect Google Drive, and then only to your own Drive. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
+Starmatic is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, and there's no server. Nothing is sent anywhere unless you choose to connect Google Drive, and then only to your own Drive. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
 
 Because it's only static files, it's hosted free on GitHub Pages. To make your own copy, fork this repo and turn on Pages (Settings → Pages → Deploy from branch → `main`, `/ (root)`).
 
