@@ -254,6 +254,100 @@ details summary{cursor:pointer;font-weight:700}
 .empty{border:2px dashed var(--ink);padding:1.2rem;display:flex;flex-direction:column;gap:.7rem;align-items:flex-start}
 .empty h3{font-size:2.2rem}
 
+/* ---- Orbit, the star bot: a pet who reminds you what's next and quizzes you on your snacks ---- */
+.orb-stage{position:relative;background:var(--night);color:#fff;border:3px solid var(--ink);box-shadow:6px 6px 0 var(--teal);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;padding:1rem}
+.orb-stage.mini{grid-template-columns:120px minmax(0,1fr);align-items:center}
+@media (max-width:640px){.orb-stage{grid-template-columns:minmax(0,1fr)}.orb-stage.mini{grid-template-columns:90px minmax(0,1fr)}}
+.orb-stage .stars{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(#fff 1.4px,transparent 1.5px),radial-gradient(#9eddd8 1.4px,transparent 1.5px);background-size:46px 38px,71px 59px;background-position:7px 9px,30px 22px;opacity:.4}
+.orb-stage > *{position:relative;min-width:0}
+.orb-botbox{display:flex;flex-direction:column;align-items:center;gap:.7rem}
+.orb-bot{width:min(230px,64vw)}
+.orb-stage.mini .orb-bot{width:100%}
+.orb-bot.hop{animation:orbhop .5s steps(4) 2}
+.orb-bot.shake{animation:orbshake .35s steps(3) 1}
+@keyframes orbhop{50%{transform:translateY(-16px)}}
+@keyframes orbshake{33%{transform:translateX(-6px)}66%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:no-preference){.orb-bot{animation:bob 3s ease-in-out infinite}}
+@media (prefers-reduced-motion:reduce){.orb-bot.hop,.orb-bot.shake{animation:none}}
+.orb-bubble{background:#fff;color:var(--ink);border:3px solid var(--ink);padding:.6rem .75rem;width:100%;position:relative;font-size:.95rem;display:flex;flex-direction:column;gap:.5rem;align-items:flex-start}
+.orb-botbox .orb-bubble{max-width:380px}
+.orb-botbox .orb-bubble::before{content:"";position:absolute;top:-12px;left:50%;margin-left:-8px;width:16px;height:12px;background:var(--ink);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.orb-bubble b{color:var(--teal-deep)}
+.orb-side{display:flex;flex-direction:column;gap:.7rem}
+.orb-name{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.orb-name h3{font-size:2.6rem;color:#fff}
+.orb-name .lv{font-family:var(--head);font-size:1.5rem;color:#f6c35a}
+.orb-meter{display:grid;gap:.2rem}
+.orb-meter .lab{display:flex;justify-content:space-between;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.orb-segs{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;border:2px solid #fff;padding:3px}
+.orb-segs i{height:11px;background:rgba(255,255,255,.12)}
+.orb-segs.fuel i.on{background:#f6c35a}
+.orb-segs.fuel.low i.on{background:var(--late)}
+.orb-segs.xp i.on{background:var(--teal)}
+.orb-segs.tutor i.on{background:#ff7fc0}
+.orb-pills{display:flex;gap:.4rem;flex-wrap:wrap}
+.orb-pills span{border:2px solid #fff;padding:.1rem .5rem;font-size:.82rem;font-weight:700}
+.orb-acts{display:flex;gap:.5rem;flex-wrap:wrap}
+.orb-acts button{flex:1 1 auto}
+button.gold{background:#f6c35a;color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.orb-stage button:not(.gold):not(.teal):not(.fill){border-color:#fff;background:transparent;color:#fff}
+.orb-bubble button:not(.gold):not(.teal):not(.fill){border-color:var(--ink);color:var(--ink)}
+.orb-bubble button{font-size:.85rem;padding:.3rem .7rem}
+.orb-crumbs{position:absolute;inset:0;pointer-events:none}
+.orb-crumbs i{position:absolute;width:6px;height:6px;animation:orbfall .9s steps(6) forwards}
+@keyframes orbfall{to{transform:translateY(60px);opacity:0}}
+.orb-tabs{display:flex;gap:.5rem;flex-wrap:wrap}
+.orb-tabs .tab{display:flex;gap:.4rem;align-items:center}
+.orb-tabs svg{width:20px;height:20px}
+.orb-panel{display:flex;flex-direction:column;gap:.8rem}
+.orb-types{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem}
+@media (max-width:560px){.orb-types{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.orb-type{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.6rem .3rem;border:2px solid var(--rule);background:var(--paper);font-weight:400;text-align:center}
+.orb-type svg{width:40px;height:40px}
+.orb-type b{font-family:var(--head);font-size:1.15rem;font-weight:400;letter-spacing:.03em}
+.orb-type small{color:var(--gray);font-size:.76rem;line-height:1.25}
+.orb-type[aria-pressed="true"]{border-color:var(--ink);background:var(--teal-soft);box-shadow:3px 3px 0 var(--ink)}
+.orb-pic{max-width:200px;border:2px solid var(--ink)}
+.orb-quiz{border:3px solid var(--ink);box-shadow:6px 6px 0 var(--teal);padding:1rem;display:flex;flex-direction:column;gap:.8rem}
+.orb-quiz .qq{font-size:1.15rem;font-weight:700;overflow-wrap:anywhere}
+.orb-quiz .meta{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--gray)}
+.orb-quiz .meta svg{width:22px;height:22px}
+.orb-quiz .qimg{width:100%;max-width:260px;border:3px solid var(--ink);background:var(--night)}
+.orb-dots{display:flex;gap:5px;margin-left:auto}
+.orb-dots i{width:14px;height:14px;border:2px solid var(--ink)}
+.orb-dots i.ok{background:var(--good)}.orb-dots i.no{background:var(--late)}.orb-dots i.now{background:#f6c35a}
+.orb-opts{display:grid;gap:.5rem}
+.orb-opts button{text-align:left;font-weight:400}
+.orb-opts button.right{background:#e3f4ea;border-color:var(--good)}
+.orb-opts button.wrong{background:#fbe7e2;border-color:var(--late)}
+.orb-opts button.used{opacity:.4}
+.orb-order{display:flex;flex-direction:column;gap:.35rem;padding:0;margin:0;list-style:none}
+.orb-order li{border:2px dashed var(--rule);padding:.35rem .6rem;min-height:2.4em}
+.orb-order li.filled{border-style:solid;border-color:var(--ink);background:var(--teal-soft)}
+.orb-gap{background:#f6c35a;padding:0 .4rem;font-weight:700}
+.orb-fb{font-weight:700}
+.orb-fb.good{color:var(--good)}.orb-fb.bad{color:var(--late)}
+.orb-done .big{font-family:var(--head);font-size:4rem;line-height:.9}
+.orb-mono{font-weight:700;background:var(--soft);padding:0 .25rem}
+.orb-snack{border:2px solid var(--ink);padding:.6rem .7rem;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:.6rem;align-items:start}
+.orb-snack > svg{width:34px;height:34px}
+.orb-snack .t{font-weight:700;overflow-wrap:anywhere}
+.orb-snack .b{font-size:.9rem;color:var(--gray);overflow-wrap:anywhere}
+.orb-snack .b ul,.orb-snack .b ol{margin:.2rem 0 0;padding-left:1.2rem}
+.orb-snack .b img{max-width:140px;border:2px solid var(--ink);margin-top:.25rem;display:block}
+.orb-snack .end{display:flex;flex-direction:column;align-items:flex-end;gap:.35rem}
+.orb-snack .end button{font-size:.8rem;padding:.15rem .45rem}
+.orb-mem{display:flex;gap:2px}
+.orb-mem svg{width:15px;height:15px}
+.orb-gear{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.7rem}
+.orb-item{border:2px solid var(--ink);padding:.6rem;display:flex;flex-direction:column;gap:.35rem;align-items:center;text-align:center}
+.orb-item .pic{background:var(--night);border:2px solid var(--ink);width:100%;display:flex;justify-content:center;padding:.35rem}
+.orb-item .pic svg{width:92px;height:92px}
+.orb-item.locked .pic svg{filter:brightness(0) invert(1) opacity(.22)}
+.orb-item b{font-family:var(--head);font-weight:400;font-size:1.25rem;letter-spacing:.03em}
+.orb-item small{color:var(--gray)}
+.orb-item button{font-size:.85rem;padding:.25rem .6rem}
+
 </style>
 </head>
 <body>
@@ -303,7 +397,8 @@ const lifeIndex = (lv, atTop) => atTop ? 5 : lv<=1 ? 0 : lv===2 ? 1 : lv<=4 ? 2 
 // ---------------- 8-bit sprites ----------------
 // Each sprite is a grid of letters (one letter = one pixel colour), drawn as crisp SVG squares:
 // no image files to load.
-const PAL = {k:"#0d0d0d", w:"#ffffff", c:"#f6efd9", l:"#9eddd8", t:"#139a93", d:"#0b5d59", b:"#6fb6ff", v:"#7a568c", m:"#e06a9a", o:"#ef8a4c", r:"#c2562d", y:"#f6c35a", n:"#8a2a22", R:"#ff5b4f", P:"#ff9e8a", B:"#3d74e0", G:"#5fd18a", Y:"#fff3a8", M:"#ff7fc0", V:"#a77bd8"};
+const PAL = {k:"#0d0d0d", w:"#ffffff", c:"#f6efd9", l:"#9eddd8", t:"#139a93", d:"#0b5d59", b:"#6fb6ff", v:"#7a568c", m:"#e06a9a", o:"#ef8a4c", r:"#c2562d", y:"#f6c35a", n:"#8a2a22", R:"#ff5b4f", P:"#ff9e8a", B:"#3d74e0", G:"#5fd18a", Y:"#fff3a8", M:"#ff7fc0", V:"#a77bd8",
+  K:"#071a19", e:"#7fe8df", S:"#9fb4b1", s:"#5e7472", L:"#cfeff0", T:"#4fc4bc", D:"#073c39"};   // the last row is for Orbit
 const SPR = {
   dust: ["........................", "..l..............M......", "...l................y...", "b.lwl....VVVVVtVVV.ywy..", "...l...VV........VVVy...", ".....tVl..........wVV...", "....tV...lllllltMt..VV..", "....Mt.tllt.....MtM..VVt", "....M..ll...cc....Mt.tV.", "...MMt.lt.Yccctc..tM..M.", "w.tMt.tl..Yyy..tc..M..tV", "V.tM..llb.yYYy.tc..tM..V", "VtlM..tc..yYwy..ll.tM..V", "V...Mt.ct..yyY..lt.tM...", ".V..Mt.tcccccY.tl.tMMt..", "tV...Mt...cc...ll..Mt...", ".Vt.tMMM......llt..M....", "..Vwt..Mtllblllt..V.....", "...Vtt...........V......", "...bVVV.......bVV...M...", "..bwb.VVVtVttVtt...MwM..", "...b................M...", ".............b..........", ".............l.........."],
   nebula: ["........................", "........................", ".....................l..", "....................lwl.", ".............Bvv.B...l..", "....B.B......vBVv.......", "...BVVVv....vvVmmVvB....", "..vmmMMmv.B.vVVmmVVVv...", "..vmMlMMVVVVmmmMmlmv.B..", "..vmmllMmVVVMmMllwlv....", "...mmMMMmmmmYmmmmlVVv...", "...VVmMMmmMYwYmmmmmmVvB.", "...BvmmmmmMMYMMmMMmMVvv.", "....vVmmMmmMMMmMMlMmVVB.", "...BvmmMmMMMMlMMMlMlmVvB", "....BvVVMwMmMMMwMmMMVVV.", "...v.vVmVMmMMMMmmMmVvVv.", ".....vvVVVVMmmmmmmVv....", ".....BvvvvvVmVmmvVvB....", "............BVVVvv....l.", "..l..........vvv.....lwl", ".lwl........B.........l.", "..l.....................", "........................"],
@@ -645,11 +740,12 @@ const KINDS = {
   study:    {e:"📖", name:"Self-study",        rate:20, hint:"Tutorials, books, practice: 20 XP an hour"},
   workshop: {e:"🛠️", name:"Workshop",          rate:30, hint:"A workshop, seminar or hands-on session: 30 XP an hour"},
   cert:     {e:"📜", name:"Certificate earned", rate:20, flat:250, hint:"250 XP, plus 20 XP for each hour it took"},
+  tutor:    {e:"🤖", name:"Orbit Tutor", rate:0, auto:true, hint:"Earned by right answers in Orbit's quizzes"},   // xp is kept on the entry
 };
 const COLORS = [["Teal","#139a93"],["Blue","#6fb6ff"],["Pink","#ff7fc0"],["Violet","#a77bd8"],["Orange","#ef8a4c"],["Green","#5fd18a"]];
 const STAGE_NAME = {dust:"Stardust", nebula:"Nebula", proto:"Protostar", shine:"Star", giant:"Giant", nova:"Supernova"};
 
-let S = null;                 // the whole sky: {v, example, goal:{title,why}, galaxies:[], courses:[], study:[]}
+let S = null;                 // the whole sky: {v, example, goal:{title,why}, galaxies:[], courses:[], study:[], snacks:[], orbit:{}}
 let view = "sky", activeCourse = null, filter = "upcoming", target = 100, before = null;
 
 // ---------------- Math ----------------
@@ -682,7 +778,7 @@ function compute(){
   }
   for (const e of S.study){
     const k = KINDS[e.kind] || KINDS.study, og = e.outcome && where[e.outcome];
-    add(og || e.galaxy, (k.flat||0) + (+e.hours||0)*k.rate, "s:"+e.id, og ? e.outcome : null);
+    add(og || e.galaxy, studyXp(e), "s:"+e.id, og ? e.outcome : null);
   }
   S.galaxies.forEach(g => g.outcomes.forEach(o => { if (o.mastered) add(g.id, MASTER_BONUS, "m", o.id); }));
   let charXp = 0;
@@ -698,12 +794,13 @@ function compute(){
     starsLit: stars.filter(b => b > 0).length, starsAll: stars.length, totalXp: Math.round(totalXp),
     hours: S.study.reduce((n,e) => n + (+e.hours||0), 0), done: S.galaxies.filter(g => gx[g.id].level >= (+g.target||50)).length};
 }
+const studyXp = e => { const k = KINDS[e.kind] || KINDS.study; return k.auto ? (+e.xp||0) : (k.flat||0) + (+e.hours||0)*k.rate; };
 const gById = id => S.galaxies.find(g => g.id === id);
 const colorOf = g => (COLORS.find(c => c[0] === g.color) || COLORS[0])[1];
 const outcomeById = id => { for (const g of S.galaxies){ const o = g.outcomes.find(o => o.id === id); if (o) return [g,o]; } return [null,null]; };
 
 // ---------------- Keeping the sky (this browser) ----------------
-function blank(){ return {v:1, example:false, goal:{title:"", why:""}, galaxies:[], courses:[], study:[]}; }
+function blank(){ return {v:1, example:false, goal:{title:"", why:""}, galaxies:[], courses:[], study:[], snacks:[], orbit:orbitBlank()}; }
 function normalize(d){
   const s = blank();
   s.example = !!d.example;
@@ -717,7 +814,10 @@ function normalize(d){
   s.courses = (Array.isArray(d.courses) ? d.courses : []).map(raw => { try { return courseFrom(raw); } catch(e){ return null; } }).filter(Boolean);
   s.study = (Array.isArray(d.study) ? d.study : []).filter(e => e && e.title).map(e => ({id: typeof e.id==="string"&&e.id ? e.id : newId(), title:String(e.title),
     date: /^\d{4}-\d{2}-\d{2}$/.test(e.date||"") ? e.date : todayISO(), kind: KINDS[e.kind] ? e.kind : "study", hours: Math.max(0, +e.hours||0),
-    galaxy: String(e.galaxy||""), outcome: e.outcome ? String(e.outcome) : null, note:String(e.note||"")}));
+    galaxy: String(e.galaxy||""), outcome: e.outcome ? String(e.outcome) : null, note:String(e.note||""),
+    ...(e.kind === "tutor" ? {xp: Math.min(TUTOR_CAP, Math.max(0, Math.round(+e.xp||0)))} : {})}));
+  s.snacks = (Array.isArray(d.snacks) ? d.snacks : []).map(snackFrom).filter(Boolean);
+  s.orbit = orbitFrom(d.orbit);
   return s;
 }
 function courseFrom(raw){
@@ -799,16 +899,30 @@ function exampleSky(){
     {id:newId(), title:"Grip & electric safety workshop", date:`${y}-10-18`, kind:"workshop", hours:4, galaxy:"g-set", outcome:set.outcomes[1].id, note:""},
     {id:newId(), title:"Shot breakdowns of favorite films", date:`${y}-11-01`, kind:"study", hours:2, galaxy:"g-comp", outcome:null, note:""},
   ];
-  return {v:1, example:true, goal:{title:"Cinematographer", why:"Example goal: start your own sky to set yours."}, galaxies:[cam, light, comp, color, set], courses:[course], study};
+  const sn = (type, galaxy, title, more) => ({id:newId(), type, galaxy, title, box:0, made:todayISO(), ...more});
+  const snacks = [
+    sn("term","g-cam","Rack focus",{body:"Shifting focus from one subject to another during a shot"}),
+    sn("fact","g-cam","What does a lower f-stop do?",{body:"Opens the aperture: more light and a shallower depth of field"}),
+    sn("fact","g-light","What does diffusion do to light?",{body:"Spreads it out, so it's softer with gentler shadows"}),
+    sn("term","g-light","Color temperature",{body:"How warm or cool a light is, in Kelvin: daylight is about 5600K, tungsten about 3200K"}),
+    sn("steps","g-light","Set up three-point lighting",{items:["Place the key light about 45° to one side","Add a softer fill light on the other side","Put a back light behind the subject"]}),
+    sn("list","g-comp","Ways to show depth in a frame",{items:["Leading lines","Foreground objects","Overlapping subjects","Light and shadow"]}),
+    sn("formula","g-cam","180° shutter rule",{body:"Shutter = 1 ÷ (2 × frame rate)", note:"At 24 fps, that's a shutter of 1/48"}),
+    sn("person","g-color","Roger Deakins",{body:"Cinematographer of Blade Runner 2049 and 1917"}),
+    sn("date","g-set","The Lumière brothers show films to a paying audience",{date:"1895-12-28"}),
+  ];
+  return {v:1, example:true, goal:{title:"Cinematographer", why:"Example goal: start your own sky to set yours."}, galaxies:[cam, light, comp, color, set], courses:[course], study, snacks,
+    orbit:{...orbitBlank(), xp:30, fuel:45}};
 }
 
 // ---------------- Drawing: the top tabs ----------------
-function render(){
-  const tabs = [["sky","🌌 Sky"],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
+function render(daily){
+  const tabs = [["sky","🌌 Sky"],["orbit","🤖 Orbit"],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
   $("#views").innerHTML = tabs.map(([k,n]) => `<button class="tab" data-view="${k}" aria-pressed="${k===view}">${n}</button>`).join("");
   $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : (driveNote() || backupNote());
   const r = compute();
-  $("#game").innerHTML = view === "classes" ? classesView(r) : view === "study" ? studyView(r) : skyView(r);
+  $("#game").innerHTML = view === "classes" ? classesView(r) : view === "study" ? studyView(r) : view === "orbit" ? orbitView(r) : skyView(r);
+  if (view === "orbit") orbitMount(daily);
   const sky = $(".sky"); if (sky) sky.scrollLeft = (sky.scrollWidth - sky.clientWidth) / 2;     // phones: start centered on the goal
 }
 
@@ -816,11 +930,13 @@ function render(){
 function skyView(r){
   if (!S.galaxies.length) return `
     ${goalCard(r)}
+    ${orbCard(r)}
     <div class="empty"><h3>🌌 Your sky is empty</h3>
       <p style="margin:0">Add a galaxy for each skill your goal needs. For a cinematographer that could be Camera, Lighting, Composition, Color and Set Life. Then add your classes and log your study to light them up.</p>
       <div class="bar-row"><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button><button class="plain" data-view="guide">🧭 Build it with AI or a worksheet</button></div></div>`;
   return `
     ${goalCard(r)}
+    ${orbCard(r)}
     <section class="box">
       <div class="box-head"><h3><span class="e">🌌</span>Your sky</h3><span class="sub">Tap a galaxy. A dashed line with 🔓 means: reach that level here to open the galaxy above.</span></div>
       <div class="sky">${skySVG(r)}</div>
@@ -1282,7 +1398,7 @@ function studyView(r){
   if (!S.galaxies.length) return `<div class="empty"><h3>📖 Study log</h3><p style="margin:0">Log tutorials, workshops and certificates here. First add a galaxy in your sky for the skill you're studying.</p><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button></div>`;
   const month = todayISO().slice(0,7);
   const list = [...S.study].sort((a,b) => b.date.localeCompare(a.date));
-  const xpOf = e => { const k = KINDS[e.kind] || KINDS.study; return Math.round((k.flat||0) + (+e.hours||0)*k.rate); };
+  const xpOf = e => Math.round(studyXp(e));
   return `<section class="box">
     <div class="box-head"><h3><span class="e">📖</span>Study log</h3>${add}</div>
     <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">
@@ -1291,9 +1407,10 @@ function studyView(r){
       <div class="tile"><span class="emo">✨</span><span class="v num">${S.study.reduce((n,e) => n + xpOf(e), 0).toLocaleString()}</span><span class="k">XP from study</span></div>
     </div>
     <div class="quests log">${list.length ? list.map(e => { const g = gById(e.galaxy), [, o] = outcomeById(e.outcome);
-      return `<button class="q" data-study="${esc(e.id)}"><span class="k" aria-hidden="true">${(KINDS[e.kind]||KINDS.study).e}</span>
+      const auto = (KINDS[e.kind]||KINDS.study).auto, tag = auto ? "div" : "button";      // Orbit Tutor lines are kept by Orbit, not edited by hand
+      return `<${tag} class="q" ${auto ? `data-kind="tutor"` : `data-study="${esc(e.id)}"`}><span class="k" aria-hidden="true">${(KINDS[e.kind]||KINDS.study).e}</span>
         <span style="min-width:0"><span class="t">${esc(e.title)}</span><span class="d"><span>${fmtDate(e.date)}</span><span>${g ? esc(g.emoji)+" "+esc(g.name) : "⚠️ No galaxy"}</span>${o ? `<span>⭐ ${esc(o.text)}</span>` : ""}</span></span>
-        <span class="r"><b class="num">+${xpOf(e)} XP</b>${fmtN(e.hours)} hr</span></button>`; }).join("")
+        <span class="r"><b class="num">+${xpOf(e)} XP</b>${auto ? "Orbit" : fmtN(e.hours) + " hr"}</span></${tag}>`; }).join("")
       : `<p class="sub">Nothing logged yet. Every hour of study counts.</p>`}</div>
   </section>`;
 }
@@ -1302,7 +1419,7 @@ function studySheet(e, isNew){
   openSheet(`
     <p class="kick">${isNew ? "Log study" : "Study"}</p><h3>${isNew ? "What did you learn?" : esc(e.title)}</h3>
     <label>What you did<input id="s-title" value="${esc(e.title)}" placeholder="Lighting tutorial: soft vs. hard light"></label>
-    <div class="row"><label>Kind<select id="s-kind">${Object.entries(KINDS).map(([k,v]) => `<option value="${k}" ${k===e.kind?"selected":""}>${v.e} ${v.name}</option>`).join("")}</select></label>
+    <div class="row"><label>Kind<select id="s-kind">${Object.entries(KINDS).filter(([,v]) => !v.auto).map(([k,v]) => `<option value="${k}" ${k===e.kind?"selected":""}>${v.e} ${v.name}</option>`).join("")}</select></label>
       <label>Date<input id="s-date" type="date" value="${esc(e.date)}"></label></div>
     <p class="sub" id="s-hint" style="margin:0"></p>
     <div class="row"><label>Hours<input id="s-hours" inputmode="decimal" value="${e.hours}"></label>
@@ -1405,7 +1522,7 @@ QUESTS:
 -
 -
 `;
-const hasSky = () => !S.example && !!(S.galaxies.length || S.courses.length || S.study.length);
+const hasSky = () => !S.example && !!(S.galaxies.length || S.courses.length || S.study.length || S.snacks.length);
 const same = (a, b) => String(a||"").trim().toLowerCase() === String(b||"").trim().toLowerCase();
 
 // The JSON inside an answer, even with words or ``` fences around it
@@ -1466,7 +1583,8 @@ function friendly(d){
     galaxies: [...new Set((Array.isArray(c.galaxies) ? c.galaxies : Array.isArray(c.feeds) ? c.feeds : []).map(gid).filter(Boolean))],
     quests: c.quests.filter(Boolean).map(q => ({...q, outcome: sid(q.outcome) || sid(q.star)}))}));
   const goal = typeof d.goal === "string" ? {title:d.goal, why:typeof d.why === "string" ? d.why : ""} : d.goal;
-  return {...d, goal, galaxies:gals, courses};
+  const snacks = (Array.isArray(d.snacks) ? d.snacks : []).filter(Boolean).map(x => ({...x, galaxy: gid(x.galaxy) || x.galaxy}));
+  return {...d, goal, galaxies:gals, courses, snacks};
 }
 function readIncoming(text){
   text = String(text || "").trim();
@@ -1483,7 +1601,7 @@ function readIncoming(text){
 // a galaxy or class you already have (same id, or same galaxy name) only gains what it's missing:
 // stars, quests, and due dates for quests that have none.
 function mergeSky(inc){
-  const n = {galaxies:0, stars:0, classes:0, quests:0, dates:0, study:0}, gmap = {}, omap = {}, fresh = [];
+  const n = {galaxies:0, stars:0, classes:0, quests:0, dates:0, study:0, snacks:0}, gmap = {}, omap = {}, fresh = [];
   const ids = new Set(S.galaxies.flatMap(g => g.outcomes.map(o => o.id)));
   if (!S.goal.title && inc.goal.title) S.goal = {...inc.goal};
   for (const g of inc.galaxies){
@@ -1512,12 +1630,13 @@ function mergeSky(inc){
   }
   for (const e of inc.study) if (!S.study.some(x => x.id === e.id)){
     S.study.push({...e, galaxy: gmap[e.galaxy] || "", outcome: e.outcome ? omap[e.outcome] || null : null}); n.study++; }
+  for (const x of inc.snacks || []) if (!S.snacks.some(y => y.id === x.id)){ S.snacks.push({...x, galaxy: gmap[x.galaxy] || ""}); n.snacks++; }
   return n;
 }
 function mergeCount(inc){ const keep = S; S = JSON.parse(JSON.stringify(S)); try { return mergeSky(inc); } finally { S = keep; } }
 function tally(n){
   const w = (k, one, many) => n[k] ? `${n[k]} ${n[k] === 1 ? one : many}` : "";
-  return [w("galaxies","galaxy","galaxies"), w("stars","star","stars"), w("classes","class","classes"), w("quests","quest","quests"), w("dates","due date","due dates"), w("study","study log entry","study log entries")].filter(Boolean).join(", ");
+  return [w("galaxies","galaxy","galaxies"), w("stars","star","stars"), w("classes","class","classes"), w("quests","quest","quests"), w("dates","due date","due dates"), w("study","study log entry","study log entries"), w("snacks","snack for Orbit","snacks for Orbit")].filter(Boolean).join(", ");
 }
 function addClasses(add){
   ensureOwn(() => {
@@ -1845,6 +1964,501 @@ function fileSheet(){
     if (add) add.onclick = () => { disarm(open, "Open this file"); addToSky(add, box.value, say); };
   });
 }
+
+// ---------------- Orbit, the star bot ----------------
+// A pet who lives in the sky. She reads what's due from your classes and study log and tells you the
+// one thing worth doing next. You feed her "snacks": short notes of what you learned, each filed under
+// a galaxy. She remembers them and quizzes you; every right answer is Orbit Tutor XP for that galaxy
+// (its own kind in the study log, up to TUTOR_CAP a day). Her own level, fuel and gear are just for fun.
+// Everything she knows lives in the sky (S.snacks, S.orbit), so it's in backups and Google Drive too.
+const TUTOR_CAP = 50, TUTOR_RIGHT = 5, TUTOR_DAILY = 10, FUEL_DRAIN = 15, DAILY_N = 5;
+const ORB_LEVELS = [0,40,100,180,280,400];
+const orbLevel = xp => { let l = 1; ORB_LEVELS.forEach((t,i) => { if (xp >= t) l = i+1; }); return l; };
+const ORB_GEAR = [
+  {id:"scarf", lv:2, name:"Comet scarf", say:"Toasty! A comet scarf for cold space nights."},
+  {id:"helmet", lv:3, name:"Bubble helmet", say:"Bubble helmet on. Ready for deep space!"},
+  {id:"turbo", lv:4, name:"Turbo flame", say:"Blue flame! I'm twice as fast now."},
+  {id:"star", lv:5, name:"Golden star", say:"A golden star! I feel like a supernova."},
+];
+function orbitBlank(){ return {xp:0, fuel:60, at:todayISO(), wear:[], streak:0, best:0, daily:{last:null, days:0}}; }
+function orbitFrom(o){
+  const b = orbitBlank(); if (!o || typeof o !== "object") return b;
+  const d = /^\d{4}-\d{2}-\d{2}$/;
+  return {xp:Math.max(0, Math.round(+o.xp||0)), fuel:Math.min(100, Math.max(0, Math.round(+o.fuel||0))), at: d.test(o.at||"") ? o.at : b.at,
+    wear:(Array.isArray(o.wear) ? o.wear : []).filter(id => ORB_GEAR.some(g => g.id === id)),
+    streak:Math.max(0, +o.streak||0), best:Math.max(0, +o.best||0),
+    daily:{last: d.test(o.daily?.last||"") ? o.daily.last : null, days:Math.max(0, +o.daily?.days||0)}};
+}
+const SNACK_TYPES = ["fact","term","list","steps","picture","formula","person","date"];
+const okImg = s => typeof s === "string" && s.length < 600000 && /^data:image\/(png|jpeg|webp|gif|svg\+xml)[;,]/.test(s);
+function snackFrom(x){
+  if (!x || !SNACK_TYPES.includes(x.type) || !String(x.title||"").trim()) return null;
+  const s = {id: typeof x.id === "string" && x.id ? x.id : newId(), type:x.type, galaxy:String(x.galaxy||""), title:String(x.title).trim(),
+    box:Math.min(3, Math.max(0, +x.box||0)), made: /^\d{4}-\d{2}-\d{2}$/.test(x.made||"") ? x.made : todayISO()};
+  if (x.type === "list" || x.type === "steps"){ s.items = (Array.isArray(x.items) ? x.items : []).map(i => String(i).trim()).filter(Boolean); if (s.items.length < 2) return null; }
+  else if (x.type === "date"){ if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")) return null; s.date = x.date; }
+  else if (x.type === "picture"){ if (!okImg(x.img)) return null; s.img = x.img; s.body = String(x.body||""); }
+  else { s.body = String(x.body||"").trim(); if (!s.body) return null; if (x.type === "formula") s.note = String(x.note||""); }
+  return s;
+}
+const daysBetween = (a, b) => Math.round((new Date(b+"T12:00:00") - new Date(a+"T12:00:00")) / DAY);
+function orbFuel(){ const o = S.orbit; return Math.max(0, o.fuel - Math.max(0, daysBetween(o.at, todayISO())) * FUEL_DRAIN); }
+function tutorToday(){ const t = todayISO(); return S.study.filter(e => e.kind === "tutor" && e.date === t).reduce((n,e) => n + (+e.xp||0), 0); }
+// Orbit Tutor XP goes into the study log: one line a day for each galaxy you were quizzed on.
+function tutorAdd(gid, xp){
+  if (!gById(gid)) return 0;
+  const add = Math.max(0, Math.min(xp, TUTOR_CAP - tutorToday())); if (!add) return 0;
+  const t = todayISO();
+  let e = S.study.find(x => x.kind === "tutor" && x.date === t && x.galaxy === gid);
+  if (!e){ e = {id:newId(), title:"Orbit Tutor quizzes", date:t, kind:"tutor", hours:0, xp:0, galaxy:gid, outcome:null, note:""}; S.study.push(e); }
+  e.xp += add; return add;
+}
+function orbGain(xp, fuel){
+  const o = S.orbit, was = orbLevel(o.xp);
+  o.fuel = Math.min(100, orbFuel() + fuel); o.at = todayISO(); o.xp += xp;
+  const now = orbLevel(o.xp);
+  if (now > was){ const got = ORB_GEAR.find(g => g.lv === now); if (got && !o.wear.includes(got.id)) o.wear.push(got.id); return {level:now, got}; }
+  return null;
+}
+// Level-ups and opened galaxies, the way commit() shows them, without redrawing the page.
+function cheer(){
+  const now = snapshot(), was = before; before = now; if (!was) return;
+  const ups = [];
+  for (const g of S.galaxies){ const a = was.g[g.id], b = now.g[g.id]; if (!a) continue;
+    if (b.lv > a.lv) ups.push(`${g.emoji} ${g.name} increased to ${b.lv}`);
+    if (a.locked && !b.locked) ups.push(`🔓 ${g.name} is open`); }
+  if (now.level > was.level){ swarm(); banner(`Level ${now.level}`, ups.join(" · ") || "Your sky is growing"); }
+  else if (ups.length) banner(ups[0], ups.slice(1).join(" · "));
+}
+
+// ---- Orbit, drawn pixel by pixel (same palette and crisp squares as the other sprites) ----
+function orbGrid({face="happy", pose="idle", gear=[]} = {}){
+  const W = 36, H = 38, g = [...Array(H)].map(() => Array(W).fill("."));
+  const put = (x,y,c) => { if (x>=0 && y>=0 && x<W && y<H) g[y][x] = c; };
+  const rect = (x,y,w,h,c) => { for (let j=y;j<y+h;j++) for (let i=x;i<x+w;i++) put(i,j,c); };
+  const rr = (x,y,w,h,r,c) => { for (let j=0;j<h;j++) for (let i=0;i<w;i++){ if (Math.min(i,w-1-i) + Math.min(j,h-1-j) >= r) put(x+i,y+j,c); } };
+  const get = (x,y) => (x>=0 && y>=0 && x<W && y<H) ? g[y][x] : ".";
+  const gold = gear.includes("star"), st = gold ? "Y" : "y";
+  rect(17,4,2,4,"s"); put(17,4,"S");
+  rect(16,1,4,2,st); rect(17,0,2,4,st); put(15,1,st); put(20,1,st); put(17,1,"w");
+  rr(2,13,5,8,1,"d"); rr(29,13,5,8,1,"d"); rect(3,16,2,2,"S"); rect(31,16,2,2,"S"); put(3,16,"w"); put(31,16,"w");
+  rr(5,8,26,17,5,"t");
+  for (let x=9;x<=26;x++) put(x,9,"T");
+  for (let y=11;y<=20;y++) put(6,y,"T");
+  rect(8,10,3,1,"L"); put(7,11,"L");
+  for (let x=10;x<=25;x++) put(x,23,"d");
+  for (let y=12;y<=21;y++) put(29,y,"d");
+  rr(8,11,20,11,3,"D"); rr(9,12,18,9,2,"K");
+  rect(15,25,6,1,"s");
+  const arm = (left, kind) => {
+    if (kind === "up"){ rect(left?6:28,21,2,6,"d"); rr(left?5:27,18,4,4,1,"S"); }
+    else if (kind === "wave"){ rect(left?6:28,20,2,7,"d"); rr(left?4:27,16,5,5,1,"S"); put(left?4:31,17,"w"); }
+    else if (kind === "hold"){ rect(left?9:25,27,2,4,"d"); rr(left?11:23,29,3,3,1,"S"); }
+    else { rect(left?8:26,27,2,4,"d"); rr(left?6:26,30,4,3,1,"S"); }
+  };
+  const [pl, pr] = {idle:["down","down"], wave:["down","wave"], cheer:["up","up"], eat:["hold","hold"], think:["down","up"]}[pose] || ["down","down"];
+  arm(true, pl); arm(false, pr);
+  rr(10,26,16,8,3,"t");
+  for (let y=27;y<=31;y++) put(11,y,"T");
+  for (let x=12;x<=24;x++) put(x,33,"d");
+  rect(14,27,8,4,"K"); put(15,28,"R"); put(17,28,"y"); put(19,28,"G"); put(20,28,"e"); rect(15,30,6,1,"D");
+  if (gear.includes("scarf")){ rect(11,24,14,2,"R"); for (let x=12;x<24;x+=3) put(x,24,"P"); rect(21,26,3,4,"R"); put(22,29,"P"); }
+  rect(12,34,4,1,"s"); rect(20,34,4,1,"s");
+  const solid = (x,y) => get(x,y) !== "." && get(x,y) !== "k", edge = [];
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++) if (g[y][x] === "." && (solid(x-1,y)||solid(x+1,y)||solid(x,y-1)||solid(x,y+1))) edge.push([x,y]);
+  edge.forEach(([x,y]) => put(x,y,"k"));
+  const turbo = gear.includes("turbo"), f1 = turbo ? "b" : "o", f2 = turbo ? "w" : "y";
+  rect(15,36,6,1,f1); rect(16,36,4,1,f2); rect(16,37,4,1,f1); rect(17,37,2,1,f2);
+  if (turbo){ put(14,36,"l"); put(21,36,"l"); put(15,37,"B"); put(20,37,"B"); }
+  if (gear.includes("helmet")){
+    for (let y=0;y<27;y++) for (let x=0;x<W;x++){ const d = Math.hypot(x-17.5,(y-15.5)*1.08); if (d>15.6 && d<16.6 && g[y][x]===".") put(x,y,"L"); }
+    put(8,5,"w"); put(7,6,"w"); put(6,7,"w");
+  }
+  if (gold){ put(14,0,"w"); put(21,3,"w"); put(13,3,"Y"); put(22,0,"Y"); }
+  const e = "e", eye = x => { rect(x,14,3,3,e); put(x,14,"w"); };
+  const faces = {
+    happy(){ eye(12); eye(21); put(15,18,e); put(20,18,e); rect(16,19,4,1,e); put(11,18,"M"); put(25,18,"M"); },
+    chomp(){ [12,21].forEach(x => { put(x,16,e); put(x+1,15,e); put(x+2,16,e); }); rect(16,17,4,3,"R"); rect(15,17,1,3,e); rect(20,17,1,3,e); rect(16,17,4,1,e); rect(17,19,2,1,"P"); put(11,18,"M"); put(25,18,"M"); },
+    munch(){ [12,21].forEach(x => { put(x,16,e); put(x+1,15,e); put(x+2,16,e); }); rect(15,18,6,1,e); put(11,18,"M"); put(25,18,"M"); },
+    stars(){ [13,22].forEach(x => { rect(x,13,1,5,"y"); rect(x-2,15,5,1,"y"); put(x,15,"w"); }); rect(15,18,6,1,e); rect(16,19,4,1,e); put(16,18,"R"); put(19,18,"R"); },
+    think(){ eye(12); rect(21,15,3,1,e); put(15,19,e); rect(16,19,4,1,e); put(24,12,"y"); },
+    wow(){ eye(12); eye(21); rect(17,17,2,3,e); put(16,18,e); put(19,18,e); put(17,18,"K"); put(18,18,"K"); },
+    oops(){ rect(12,15,3,1,e); put(13,14,e); rect(21,15,3,1,e); put(22,14,e); rect(16,19,4,1,e); put(15,18,e); put(20,18,e); put(25,13,"l"); put(25,14,"l"); },
+    hungry(){ rect(12,15,3,2,e); rect(21,15,3,2,e); put(12,14,e); put(23,14,e); rect(16,18,4,1,e); put(15,19,e); put(20,19,e); put(18,19,"l"); },
+    sleepy(){ rect(12,16,3,1,e); rect(21,16,3,1,e); rect(17,19,2,1,e); put(24,12,"S"); put(25,12,"S"); put(25,13,"S"); put(24,14,"S"); put(25,14,"S"); },
+  };
+  (faces[face] || faces.happy)();
+  return g.map(r => r.join(""));
+}
+const gridSVG = (grid, cls="") => { SPR.__tmp = grid; const out = sprite("__tmp", cls); delete SPR.__tmp; return out; };
+const orbSVG = opts => gridSVG(orbGrid(opts));
+
+const SNACK = {
+  fact:{name:"Cosmo Cookie", what:"A fact", spr:["....kkkk....","..kkyyyykk..",".kyyyyyyyyk.",".kynnyyyyyk.","kyyyyyyynyyk","kyyyyYyyyyyk","kyyyYwYyynyk","kynyyYyyyyyk",".kyyyyyynyk.",".kyyynyyyyk.","..kkyyyykk..","....kkkk...."]},
+  term:{name:"Moon Cheese", what:"A term", spr:["............","........kk..","......kkYk..","....kkYYYk..","..kkYYYoYYk.","kkYYYYYYYYk.","kYYoYYYYYYk.","kYYYYYYoYYYk","kYYYYoYYYYYk","kYoYYYYYYoYk","kkkkkkkkkkkk","............"]},
+  list:{name:"Nebula Noodles", what:"Key points", spr:["..l...l..l..","...l...l..l.","..l...l..l..","kkkkkkkkkkkk","kYyYyYyYyYyk","kyYyYyYyYyYk",".kVVVVVVVVk.",".kVvVVVVvVk.","..kVVVVVVk..","..kvVVVVvk..","...kkkkkk...","............"]},
+  steps:{name:"Rocket Pop", what:"Steps in order", spr:["....kkkk....","...kRRRRk...","..kRRRPRRk..","..kRRRRRRk..","..kwwwwwwk..","..kwwwwwwk..","..kBBBBBBk..","..kBBBlBBk..","...kkkkkk...",".....kck....",".....kck....",".....kkk...."]},
+  picture:{name:"Pixel Pizza", what:"A picture", spr:["kkkkkkkkkkkk","kooooooooook",".kyRyyyyRyk.",".kyyyyyyyyk.","..kyyRyyyk..","..kyyyyyyk..","...kyyRyk...","...kyyyyk...","....kyyk....","....kyyk....",".....kk.....","............"]},
+  formula:{name:"Quark Cracker", what:"A formula", spr:["............",".kkkkkkkkkk.",".kyyyyyyyyk.",".kynyynyynk.",".kyyyyyyyyk.",".kyyyyyyyyk.",".kynyynyynk.",".kyyyyyyyyk.",".kyyyyyyyyk.",".kynyynyynk.",".kkkkkkkkkk.","............"]},
+  person:{name:"Hero Sandwich", what:"An important person", spr:["............","............","...kkkkkk...","..koYooYok..",".kooooooook.","kGGGGGGGGGGk","kRRRRRRRRRRk","knnnnnnnnnnk",".kooooooook.","..kkkkkkkk..","............","............"]},
+  date:{name:"Countdown Cupcake", what:"A date or milestone", spr:[".....yy.....",".....RR.....","....kRRk....","..kkMMMMkk..",".kMMwMMMwMk.",".kMMMMMMMMk.",".kkkkkkkkkk.","..kolololk..","..kolololk..","...kololk...","...kkkkkk...","............"]},
+};
+const ORB_ICON = {
+  quiz:["....kkkk....","...kyyyyk...","..kyykkyyk..","..kkk..kyk..",".......kyk..","......kyyk..",".....kyyk...",".....kyk....",".....kkk....",".....kyk....",".....kkk....","............"],
+  gear:["....kkkk....","...kllllk...","..kllwlllk..",".kllwllllk..",".klllllllk..",".klllllllk..",".kllllllllk.",".kkkllllkkk.","kSSkkkkkkSSk","kSSSSSSSSSSk","kkkkkkkkkkkk","............"],
+  on:[".....k.....","....kyk....","....kyk....","kkkkyYykkkk","kyyyYwYyyyk",".kyyYYYyyk.","..kyyyyyk..","..kyykyyk..",".kyk...kyk.",".kk.....kk.","..........."],
+  off:[".....k.....","....k.k....","....k.k....","kkkk...kkkk","k.........k",".k.......k.","..k.....k..","..k..k..k..",".k.k...k.k.",".kk.....kk.","..........."],
+};
+const memStars = n => `<span class="orb-mem" aria-label="${n} of 3 memory stars">${[0,1,2].map(i => gridSVG(i < n ? ORB_ICON.on : ORB_ICON.off)).join("")}</span>`;
+const fmtLong = d => { const [y,m,dd] = d.split("-").map(Number); return new Date(y,m-1,dd).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); };
+
+// ---- What Orbit says: the most useful thing first ----
+function orbTips(r){
+  const tips = [], t = todayISO(), wk = iso(new Date(Date.now() + 7*DAY)), fuel = orbFuel();
+  if (S.orbit.daily.last !== t && S.snacks.length) tips.push({face:"wow", html:`Your <b>daily quiz</b> is ready: ${Math.min(DAILY_N, S.snacks.length)} questions, about 2 minutes.`, btn:["daily","Start daily quiz"]});
+  for (const c of S.courses){ const s = r.cs[c.id] || stats(c);
+    c.quests.filter(q => status(q) === "late").slice(0,2).forEach(q => tips.push({face:"oops", html:`Uh oh, <b>${esc(q.title)}</b> slipped past its date. Turn it in, and ask if late work still counts?`}));
+    c.quests.filter(q => !q.done && q.due && q.due >= t && q.due <= wk).sort((a,b) => (s.impact[b.id]||0) - (s.impact[a.id]||0)).slice(0,2)
+      .forEach(q => tips.push({face:"think", html:`<b>${esc(q.title)}</b> is due ${fmtDate(q.due)}${s.impact[q.id] ? `, and it's worth <b>${(s.impact[q.id]).toFixed(1)}%</b> of your grade` : ""}. Want to start it?`})); }
+  if (!S.snacks.length && S.galaxies.length) tips.push({face:"hungry", html:`I'm hungry for knowledge! Feed me a <b>snack</b> of something you learned, and I'll quiz you on it.`, btn:["feed","Feed Orbit"]});
+  const lastStudy = S.study.filter(e => e.kind !== "tutor").map(e => e.date).sort().pop();
+  if (lastStudy && daysBetween(lastStudy, t) >= 3) tips.push({face:"sleepy", html:`I missed you! It's been ${daysBetween(lastStudy, t)} days since you logged study. Even 20 minutes counts.`});
+  for (const g of S.galaxies){ const G = r.gx[g.id]; if (!G.locked && G.need && G.need - G.into <= Math.max(4, G.need/4) && G.level < 100)
+    tips.push({face:"stars", html:`${esc(g.emoji)} <b>${esc(g.name)}</b> is only ${G.need - G.into} XP from level ${G.level+1}. A quick quiz could do it!`}); }
+  if (fuel < 30 && S.snacks.length) tips.push({face:"hungry", html:`My star fuel is at <b>${fuel}%</b>… Feed me something you learned today?`, btn:["feed","Feed Orbit"]});
+  if (!tips.length) tips.push({face:"happy", html: S.galaxies.length ? `Hi! Your sky is looking bright. Feed me what you learn and I'll help it stick.` : `Hi, I'm Orbit! Add a galaxy for a skill you're learning, then feed me snacks of what you learn.`});
+  return tips;
+}
+let orbTalkI = 0, orbFaceT = null;
+function orbMood(face, pose="idle", ms=0, anim=""){
+  const el = $("#orb-bot"); if (!el) return;
+  el.innerHTML = orbSVG({face, pose, gear:S.orbit.wear});
+  if (anim){ el.classList.remove("hop","shake"); void el.offsetWidth; el.classList.add(anim); }
+  clearTimeout(orbFaceT);
+  if (ms) orbFaceT = setTimeout(() => { const b = $("#orb-bot"); if (b) b.innerHTML = orbSVG({face: orbFuel() < 30 ? "hungry" : "happy", gear:S.orbit.wear}); }, ms);
+}
+function orbSay(html, btn){
+  const el = $("#orb-say"); if (!el) return;
+  el.innerHTML = `<div>${html}</div>${btn ? `<button class="gold" data-orb="${btn[0]}">${esc(btn[1])}</button>` : ""}`;
+}
+function orbCard(r){
+  const tip = orbTips(r)[0];
+  return `<section class="orb-stage mini" aria-label="Orbit, your star bot">
+    <div class="stars"></div>
+    <div id="orb-bot" class="orb-bot" role="img" aria-label="Orbit, a pixel-art space robot">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
+    <div class="orb-side"><div class="orb-bubble" id="orb-say"><div>${tip.html}</div>${tip.btn ? `<button class="gold" data-orb="${tip.btn[0]}">${esc(tip.btn[1])}</button>` : ""}</div>
+      <div class="orb-acts"><button data-orb="talk">Talk</button><button data-orb="open">Visit Orbit</button></div></div>
+  </section>`;
+}
+
+// ---- The Orbit tab ----
+let orbTab = "feed", orbType = "fact", orbImg = null, sess = null, lastAsked = null;
+function orbStatsHTML(){
+  const o = S.orbit, lv = orbLevel(o.xp), lo = ORB_LEVELS[lv-1], hi = ORB_LEVELS[lv] ?? lo, fuel = orbFuel(), tut = tutorToday();
+  const segs = (pct, cls) => `<div class="orb-segs ${cls}">${Array.from({length:10}, (_,i) => `<i class="${i < Math.round(pct/10) ? "on" : ""}"></i>`).join("")}</div>`;
+  return `<div class="orb-name"><h3>Orbit</h3><span class="lv">LV ${lv}</span></div>
+    <div class="orb-meter"><div class="lab"><span>Star fuel</span><span class="num">${fuel}%</span></div>${segs(fuel, "fuel" + (fuel < 30 ? " low" : ""))}</div>
+    <div class="orb-meter"><div class="lab"><span>Bot XP</span><span class="num">${hi > lo ? `${o.xp} / ${hi}` : `${o.xp} · max`}</span></div>${segs(hi > lo ? (o.xp-lo)/(hi-lo)*100 : 100, "xp")}</div>
+    <div class="orb-meter"><div class="lab"><span>Orbit Tutor XP today</span><span class="num" id="orb-tut">${tut} / ${TUTOR_CAP}</span></div>${segs(tut/TUTOR_CAP*100, "tutor")}</div>
+    <div class="orb-pills"><span class="num">Day streak ${o.daily.days}</span><span class="num">Answer streak ${o.streak}</span><span class="num">${S.snacks.length} snack${S.snacks.length === 1 ? "" : "s"}</span></div>`;
+}
+function orbRestat(){ const el = $("#orb-stats"); if (el) el.innerHTML = orbStatsHTML(); }
+function orbitView(r){
+  const tip = orbTips(r)[0], done = S.orbit.daily.last === todayISO();
+  const tabs = [["feed","Feed", SNACK.fact.spr],["quiz","Quiz", ORB_ICON.quiz],["pantry","Pantry", SNACK.list.spr],["gear","Gear", ORB_ICON.gear]];
+  return `<section class="orb-stage" aria-label="Orbit, your star bot">
+      <div class="stars"></div>
+      <div class="orb-botbox"><div id="orb-bot" class="orb-bot" role="img" aria-label="Orbit, a pixel-art space robot with a screen face and a star on her antenna">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
+        <div class="orb-bubble" id="orb-say"><div>${tip.html}</div>${tip.btn && tip.btn[0] !== "feed" ? `<button class="gold" data-orb="${tip.btn[0]}">${esc(tip.btn[1])}</button>` : ""}</div></div>
+      <div class="orb-side"><div id="orb-stats" style="display:flex;flex-direction:column;gap:.7rem">${orbStatsHTML()}</div>
+        <div class="orb-acts"><button class="gold" data-orb="daily">${done ? "Daily quiz ✓" : "Daily quiz"}</button><button data-orb="talk">Talk</button></div></div>
+      <div class="orb-crumbs" id="orb-crumbs"></div>
+    </section>
+    <div class="orb-tabs" role="tablist">${tabs.map(([k,n,spr]) => `<button class="tab" role="tab" data-orbtab="${k}" aria-selected="${k===orbTab}" aria-pressed="${k===orbTab}">${gridSVG(spr)}${n}</button>`).join("")}</div>
+    <section class="box orb-panel" id="orb-panel">${!S.galaxies.length ? `<div class="empty"><h3>🌌 Orbit needs a galaxy first</h3><p style="margin:0">Snacks are filed under the galaxies in your sky. Add one for a skill you're learning, then come back and feed Orbit.</p><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button></div>`
+      : orbTab === "feed" ? feedHTML() : orbTab === "pantry" ? pantryHTML() : orbTab === "gear" ? gearHTML() : `<div class="box-head"><h3 id="orb-qtitle">Quiz</h3></div><div id="orb-quiz" class="orb-quiz"></div>`}</section>`;
+}
+
+// ---- Feeding ----
+const FORM = {
+  fact:{t:"Question", tp:"What does a lower f-stop do?", b:"Answer", bp:"More light and a shallower depth of field", h:"Orbit asks the question and you pick the answer."},
+  term:{t:"Word or idea", tp:"Rack focus", b:"What it means", bp:"Shifting focus from one subject to another during a shot", h:"Tip: type “word: meaning” in the first box and Orbit splits it for you."},
+  list:{t:"What the list is about", tp:"Qualities of light", b:"Key points, one per line", bp:"Hardness\nDirection\nColor\nIntensity", h:"Paste bullets as they are; Orbit removes the dots and dashes."},
+  steps:{t:"How to…", tp:"Set up three-point lighting", b:"Steps, one per line, in order", bp:"Place the key light\nAdd a softer fill light\nAdd a back light", h:"Numbered notes work too: “1.” and “2)” are cleaned off."},
+  picture:{t:"What it shows", tp:"A waveform monitor", b:"Notes (optional)", bp:"What to look for in it", h:"Orbit shows you the picture and asks what it is.", pic:true},
+  formula:{t:"Name", tp:"Depth of field rule of thumb", b:"Formula, then what it means on a second line", bp:"Shutter = 1 ÷ (2 × frame rate)\nThe 180° shutter rule", h:"Orbit asks you to pick the right formula for the name."},
+  person:{t:"Name", tp:"Roger Deakins", b:"Who they are and why they matter", bp:"Cinematographer of Blade Runner 2049 and 1917", h:"Orbit describes the person and you name them."},
+  date:{t:"What happened", tp:"The first color feature film", h:"Orbit asks when it happened, or has you put milestones in order.", date:true},
+};
+function feedHTML(){
+  const f = FORM[orbType];
+  return `<div class="box-head"><h3><span class="e">🍪</span>Feed Orbit</h3><span class="sub">Notes from class, work or a video. Each snack is filed under a galaxy.</span></div>
+    <div class="orb-types">${SNACK_TYPES.map(k => `<button class="orb-type" data-otype="${k}" aria-pressed="${k===orbType}">${gridSVG(SNACK[k].spr)}<b>${SNACK[k].name}</b><small>${SNACK[k].what}</small></button>`).join("")}</div>
+    <div class="row"><label>Galaxy<select id="o-gal">${S.galaxies.map(g => `<option value="${esc(g.id)}">${esc(g.emoji)} ${esc(g.name)}</option>`).join("")}</select></label>
+      <label>${f.t}<input id="o-title" autocomplete="off" placeholder="${esc(f.tp)}"></label></div>
+    ${f.date ? `<label>When<input id="o-date" type="date"></label>` : ""}
+    ${f.pic ? `<label>Picture<input id="o-pic" type="file" accept="image/*"><img id="o-prev" class="orb-pic" alt="" hidden></label>` : ""}
+    ${f.date ? "" : `<label>${f.b}<textarea id="o-body" rows="${["list","steps"].includes(orbType) ? 6 : orbType === "formula" ? 3 : 2}" placeholder="${esc(f.bp)}"></textarea></label>`}
+    <p class="sub" style="margin:0">${f.h}</p>
+    <div id="o-err" class="err" role="alert"></div>
+    <div class="actions" style="justify-content:flex-start"><button class="teal" id="o-feed">Feed Orbit</button></div>`;
+}
+const cleanLine = l => l.replace(/^\s*(?:[-–—•*·▪◦●>]|\d{1,2}[.)]|[a-z][.)])\s+/i, "").trim();
+function feedMount(){
+  const body = $("#o-body"), title = $("#o-title"), err = $("#o-err");
+  if (body) body.addEventListener("paste", () => setTimeout(() => {
+    const lines = body.value.split("\n").filter(l => l.trim()); if (lines.length < 2) return;
+    const t = lines.every(l => /^\s*\d{1,2}[.)]/.test(l)) ? "steps" : lines.every(l => /^\s*[-–—•*·▪◦●]/.test(l)) ? "list" : null;
+    if (t && t !== orbType){ const keep = [title.value, body.value, $("#o-gal").value]; orbType = t; $("#orb-panel").innerHTML = feedHTML(); feedMount();
+      $("#o-title").value = keep[0]; $("#o-body").value = keep[1]; $("#o-gal").value = keep[2]; $("#o-err").className = "sub"; $("#o-err").textContent = `That looks like ${t === "steps" ? "steps" : "a list"}, so Orbit made it ${SNACK[t].name}.`; }
+  }));
+  title.addEventListener("blur", () => {
+    const m = title.value.match(/^([^:=]{2,60})\s*[:=–—]\s*(.{3,})$/);
+    if (m && body && !body.value.trim() && (orbType === "term" || orbType === "fact")){ title.value = m[1].trim(); body.value = m[2].trim(); }
+  });
+  const pic = $("#o-pic");
+  if (pic) pic.onchange = () => {
+    const file = pic.files[0]; if (!file) return;
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 360 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width*k)); c.height = Math.max(1, Math.round(img.height*k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      orbImg = c.toDataURL("image/jpeg", .75); URL.revokeObjectURL(url);
+      $("#o-prev").src = orbImg; $("#o-prev").hidden = false;
+    };
+    img.onerror = () => { err.textContent = "Orbit couldn't open that picture. Try a photo or a screenshot."; };
+    img.src = url;
+  };
+  $("#o-feed").onclick = () => {
+    const name = title.value.trim(), raw = body ? body.value.trim() : "", lines = raw.split("\n").map(cleanLine).filter(Boolean);
+    const nope = m => { err.className = "err"; err.textContent = m; orbMood("oops","idle",1500,"shake"); };
+    if (!name) return nope(`Give your ${SNACK[orbType].name} a ${FORM[orbType].t.toLowerCase()} first.`);
+    const s = {id:newId(), type:orbType, galaxy:$("#o-gal").value, title:name, box:0, made:todayISO()};
+    if (orbType === "list" || orbType === "steps"){ if (lines.length < 2) return nope("Add at least two lines so Orbit has something to quiz you on."); s.items = lines; }
+    else if (orbType === "date"){ const d = $("#o-date").value; if (!d) return nope("Pick when it happened."); s.date = d; }
+    else if (orbType === "picture"){ if (!orbImg) return nope("Choose a picture first."); s.img = orbImg; s.body = raw.replace(/\s*\n\s*/g, " "); }
+    else if (orbType === "formula"){ if (!raw) return nope("Add the formula too."); const [f, ...rest] = raw.split("\n"); s.body = f.trim(); s.note = rest.join(" ").trim(); }
+    else { if (!raw) return nope(`Add the ${FORM[orbType].b.toLowerCase()} too.`); s.body = raw.replace(/\s*\n\s*/g, " "); }
+    S.snacks.push(s); orbImg = null;
+    const up = orbGain(10, 20);
+    persist(); const g = gById(s.galaxy);
+    $("#orb-panel").innerHTML = feedHTML(); feedMount(); $("#o-gal").value = s.galaxy; orbRestat();
+    $("#o-err").className = "sub"; $("#o-err").textContent = `Fed! ${SNACK[s.type].name} filed under ${g ? g.name : "your sky"}. +10 bot XP, +20 fuel.`;
+    let n = 0; const frames = ["chomp","munch","chomp","munch"];
+    const tick = () => { if (n < frames.length){ orbMood(frames[n++], "eat"); setTimeout(tick, 260); } else orbMood("happy","cheer",2000,"hop"); };
+    tick(); crumbs();
+    orbSay(`Mmm, ${SNACK[s.type].name.toLowerCase()}! <b>${esc(s.title)}</b> is filed under <b>${esc(g ? g.name : "")}</b>.${s.items ? ` I'll remember all ${s.items.length} ${s.type === "steps" ? "steps" : "points"}.` : ""}`);
+    if (up) levelUp(up);
+  };
+}
+function crumbs(){
+  const box = $("#orb-crumbs"), bot = $("#orb-bot"); if (!box || !bot) return;
+  const r = bot.getBoundingClientRect(), p = box.getBoundingClientRect();
+  box.innerHTML = Array.from({length:7}, (_,i) => `<i style="left:${r.left-p.left+r.width*(.36+Math.random()*.28)}px;top:${r.top-p.top+r.height*.55}px;animation-delay:${i*60}ms;background:${["#f6c35a","#ef8a4c","#fff3a8"][i%3]}"></i>`).join("");
+  setTimeout(() => { box.innerHTML = ""; }, 1500);
+}
+function levelUp(up){ orbRestat(); setTimeout(() => { orbMood("stars","cheer",2600,"hop"); orbSay(`<b>LEVEL ${up.level}!</b> ${up.got ? up.got.say + " See the Gear tab." : "I'm stronger than ever."}`); }, 900); }
+
+// ---- Pantry: your snacks, which double as notes ----
+function snackBody(s){
+  if (s.items) return s.type === "steps" ? `<ol>${s.items.map(i => `<li>${esc(i)}</li>`).join("")}</ol>` : `<ul>${s.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+  if (s.type === "date") return esc(fmtLong(s.date));
+  if (s.type === "formula") return `<span class="orb-mono">${esc(s.body)}</span>${s.note ? `<br>${esc(s.note)}` : ""}`;
+  if (s.type === "picture") return `<img src="${esc(s.img)}" alt="${esc(s.title)}">${esc(s.body)}`;
+  return esc(s.body);
+}
+function pantryHTML(){
+  const groups = [...S.galaxies.map(g => [g, S.snacks.filter(s => s.galaxy === g.id)]), [null, S.snacks.filter(s => !gById(s.galaxy))]].filter(([g, l]) => g || l.length);
+  const tut = id => S.study.filter(e => e.kind === "tutor" && e.galaxy === id).reduce((n,e) => n + (+e.xp||0), 0);
+  return `<div class="box-head"><h3><span class="e">🍱</span>Pantry</h3><span class="sub">Every snack you've fed Orbit. The stars show how well you remember each one.</span></div>
+    ${groups.map(([g, list]) => `<div style="display:flex;flex-direction:column;gap:.5rem"><p class="kick">${g ? `${esc(g.emoji)} ${esc(g.name)} · ${list.length} snack${list.length === 1 ? "" : "s"} · ${tut(g.id)} Orbit Tutor XP` : "⚠️ No galaxy"}</p>
+      ${list.length ? list.map(s => `<div class="orb-snack">${gridSVG(SNACK[s.type].spr)}<div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="b">${snackBody(s)}</div></div>
+        <div class="end">${memStars(s.box)}<button class="plain" data-snackdel="${esc(s.id)}">Remove</button></div></div>`).join("") : `<p class="sub" style="margin:0">Nothing here yet.</p>`}</div>`).join("")}`;
+}
+function pantryMount(){
+  document.querySelectorAll("[data-snackdel]").forEach(b => b.onclick = () => armed(b, "Tap again to remove", () => {
+    S.snacks = S.snacks.filter(s => s.id !== b.dataset.snackdel); persist(); $("#orb-panel").innerHTML = pantryHTML(); pantryMount(); orbRestat(); }));
+}
+
+// ---- Gear ----
+function gearHTML(){
+  const lv = orbLevel(S.orbit.xp);
+  return `<div class="box-head"><h3><span class="e">🛰️</span>Gear</h3><span class="sub">Orbit earns gear as she levels up from snacks and quizzes.</span></div>
+    <div class="orb-gear">${ORB_GEAR.map(g => { const open = lv >= g.lv, on = S.orbit.wear.includes(g.id);
+      return `<div class="orb-item ${open ? "" : "locked"}"><div class="pic">${orbSVG({gear:[g.id]})}</div><b>${g.name}</b>${open ? `<button data-gear="${g.id}" class="${on ? "fill" : ""}">${on ? "Wearing" : "Put on"}</button>` : `<small>Unlocks at level ${g.lv}</small>`}</div>`; }).join("")}</div>`;
+}
+function gearMount(){
+  document.querySelectorAll("[data-gear]").forEach(b => b.onclick = () => {
+    const id = b.dataset.gear, w = S.orbit.wear; S.orbit.wear = w.includes(id) ? w.filter(x => x !== id) : [...w, id]; persist();
+    $("#orb-panel").innerHTML = gearHTML(); gearMount(); orbMood("wow","cheer",1400,"hop");
+    orbSay(S.orbit.wear.includes(id) ? ORB_GEAR.find(g => g.id === id).say : "Back to my everyday look.");
+  });
+}
+
+// ---- Quizzes ----
+const shuffle = a => { a = [...a]; for (let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+function startFree(){ sess = {mode:"free"}; $("#orb-qtitle").textContent = "Quiz"; ask(); }
+function dailyPicks(){
+  const pool = shuffle(S.snacks).sort((a,b) => a.box - b.box), picks = [], gals = new Set(), kinds = new Set();
+  const take = ok => { for (const s of pool) if (picks.length < DAILY_N && !picks.includes(s) && ok(s)){ picks.push(s); gals.add(s.galaxy); kinds.add(s.type); } };
+  take(s => !gals.has(s.galaxy) && !kinds.has(s.type)); take(s => !kinds.has(s.type)); take(() => true);
+  return shuffle(picks);
+}
+function startDaily(){
+  $("#orb-qtitle").textContent = "Daily quiz";
+  const Q = $("#orb-quiz");
+  if (S.orbit.daily.last === todayISO()){
+    Q.innerHTML = `<p class="qq">You did today's quiz already. Day streak: ${S.orbit.daily.days}.</p><p class="sub" style="margin:0">Come back tomorrow for new questions, or keep practicing now.</p><div class="actions" style="justify-content:flex-start"><button class="fill" id="orb-more">Keep practicing</button></div>`;
+    $("#orb-more").onclick = startFree; return;
+  }
+  if (!S.snacks.length){ Q.innerHTML = `<p class="qq">Feed Orbit a few snacks first, and she'll make you a quiz.</p>`; return; }
+  sess = {mode:"daily", list:dailyPicks(), n:0, marks:[]};
+  orbMood("wow","cheer",1200,"hop"); orbSay(`Daily quiz! <b>${sess.list.length} question${sess.list.length === 1 ? "" : "s"}</b>. Let's light up some stars.`);
+  ask();
+}
+function pickSnack(){
+  if (sess.mode === "daily") return sess.list[sess.n];
+  if (!S.snacks.length) return null;
+  const w = S.snacks.flatMap(s => Array(4 - s.box).fill(s)).filter(s => S.snacks.length < 2 || s.id !== lastAsked);
+  return w[Math.floor(Math.random()*w.length)];
+}
+const others = (s, type, f) => S.snacks.filter(o => o.id !== s.id && o.type === type).map(o => f === "date" ? fmtLong(o.date) : o[f]);
+function dots(){ return sess.mode !== "daily" ? "" : `<span class="orb-dots" aria-label="Question ${sess.n+1} of ${sess.list.length}">${sess.list.map((_,i) => `<i class="${sess.marks[i] === true ? "ok" : sess.marks[i] === false ? "no" : i === sess.n ? "now" : ""}"></i>`).join("")}</span>`; }
+function choose(s, Q, head, qHtml, answer, pool, {mono=false, extra="", after}={}){
+  const wrong = shuffle([...new Set(pool.filter(w => w && w !== answer))]);
+  if (wrong.length < 2) return false;
+  const opts = shuffle([answer, ...wrong.slice(0,2)]);
+  Q.innerHTML = `${head}<div class="qq">${qHtml}</div>${extra}<div class="orb-opts">${opts.map((o,i) => `<button data-oi="${i}">${mono ? `<span class="orb-mono">${esc(o)}</span>` : esc(o)}</button>`).join("")}</div><p class="orb-fb" aria-live="polite"></p>`;
+  Q.querySelectorAll("[data-oi]").forEach(b => b.onclick = () => {
+    const ok = opts[+b.dataset.oi] === answer;
+    Q.querySelectorAll("[data-oi]").forEach(x => { x.disabled = true; if (opts[+x.dataset.oi] === answer) x.classList.add("right"); });
+    if (!ok) b.classList.add("wrong");
+    if (after) after();
+    result(s, ok, Q);
+  });
+  return true;
+}
+function inOrder(s, Q, head, qHtml, items, after){
+  const order = [], mixed = shuffle(items.map((t,i) => ({t,i}))); let miss = 0;
+  Q.innerHTML = `${head}<div class="qq">${qHtml}</div><ol class="orb-order">${items.map(() => `<li></li>`).join("")}</ol><div class="orb-opts">${mixed.map(m => `<button data-oi="${m.i}">${esc(m.t)}</button>`).join("")}</div><p class="orb-fb" aria-live="polite"></p>`;
+  const slots = Q.querySelectorAll(".orb-order li");
+  Q.querySelectorAll("[data-oi]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.oi;
+    if (i === order.length){
+      slots[i].textContent = items[i]; slots[i].classList.add("filled"); order.push(i); b.disabled = true; b.classList.add("used");
+      if (order.length === items.length){ if (after) after(slots); result(s, miss === 0, Q, miss ? `All in order, with ${miss} wrong tap${miss > 1 ? "s" : ""}. Orbit will bring this one back soon.` : null); }
+    } else {
+      miss++; b.classList.add("wrong"); setTimeout(() => b.classList.remove("wrong"), 400); orbMood("oops","think",700,"shake");
+      const fb = Q.querySelector(".orb-fb"); fb.textContent = "Not that one yet…"; fb.className = "orb-fb bad";
+    }
+  });
+}
+function ask(){
+  const Q = $("#orb-quiz"); if (!Q) return;
+  const s = pickSnack();
+  if (!s){ Q.innerHTML = `<p class="qq">No snacks yet. Feed Orbit one first!</p>`; return; }
+  lastAsked = s.id;
+  if (sess.mode !== "daily") orbMood("think","think");
+  const g = gById(s.galaxy);
+  const head = `<div class="meta">${gridSVG(SNACK[s.type].spr)}<span>${SNACK[s.type].name}${g ? ` · ${esc(g.emoji)} ${esc(g.name)}` : ""}</span>${memStars(s.box)}${dots()}</div>`;
+  const pic = `<img class="qimg" src="${esc(s.img || "")}" alt="The picture to name">`;
+  const Qs = {fact:esc(s.title), term:`What does <b>${esc(s.title)}</b> mean?`, person:`Who is this? “${esc(s.body)}”`, formula:`What's the formula for <b>${esc(s.title)}</b>?`,
+    picture:`What does this picture show?`, date:`When did this happen? <b>${esc(s.title)}</b>`};
+  let shown = false;
+  if (s.type === "fact") shown = choose(s, Q, head, Qs.fact, s.body, others(s,"fact","body").concat(others(s,"term","body")));
+  else if (s.type === "term") shown = choose(s, Q, head, Qs.term, s.body, others(s,"term","body").concat(others(s,"fact","body")));
+  else if (s.type === "person") shown = choose(s, Q, head, Qs.person, s.title, others(s,"person","title"));
+  else if (s.type === "formula") shown = choose(s, Q, head, Qs.formula, s.body, others(s,"formula","body"), {mono:true, after:() => { if (s.note) Q.querySelector(".orb-fb").insertAdjacentHTML("afterend", `<p class="sub" style="margin:0">${esc(s.note)}</p>`); }});
+  else if (s.type === "picture") shown = choose(s, Q, head, Qs.picture, s.title, others(s,"picture","title"), {extra:pic});
+  else if (s.type === "date"){
+    const more = shuffle(S.snacks.filter(o => o.type === "date" && o.id !== s.id && o.date !== s.date)).filter((o,i,a) => a.findIndex(x => x.date === o.date) === i).slice(0,2);
+    if (more.length === 2 && Math.random() < .5){
+      const set = [s, ...more].sort((a,b) => a.date.localeCompare(b.date));
+      inOrder(s, Q, head, `Put these in order, earliest first.`, set.map(o => o.title), slots => set.forEach((o,i) => { slots[i].textContent = `${o.title} · ${fmtLong(o.date)}`; }));
+      shown = true;
+    } else shown = choose(s, Q, head, Qs.date, fmtLong(s.date), others(s,"date","date"));
+  } else if (s.type === "list"){
+    const gap = Math.floor(Math.random()*s.items.length), ans = s.items[gap];
+    const lis = `<ul style="margin:0;padding-left:1.3rem">${s.items.map((it,i) => `<li>${i === gap ? `<span class="orb-gap">???</span>` : esc(it)}</li>`).join("")}</ul>`;
+    const pool = S.snacks.filter(o => o.type === "list" && o.id !== s.id).flatMap(o => o.items).filter(x => !s.items.includes(x));
+    shown = choose(s, Q, head, `One point is missing from <b>${esc(s.title)}</b>. Which one?`, ans, pool, {extra:lis, after:() => { Q.querySelector(".orb-gap").textContent = ans; }});
+    if (!shown){ selfGrade(s, Q, head, `What's missing from <b>${esc(s.title)}</b>?${lis}`, ans); return; }
+  } else if (s.type === "steps"){ inOrder(s, Q, head, `Tap the steps of <b>${esc(s.title)}</b> in order.`, s.items); shown = true; }
+  if (!shown) selfGrade(s, Q, head, Qs[s.type] + (s.type === "picture" ? pic : ""), s.type === "person" || s.type === "picture" ? s.title : s.type === "date" ? fmtLong(s.date) : s.body);
+}
+// With too few snacks of a kind for choices, Orbit shows the answer and you say whether you knew it.
+function selfGrade(s, Q, head, q, answer){
+  Q.innerHTML = `${head}<div class="qq">${q}</div><div class="actions" style="justify-content:flex-start"><button class="fill" id="orb-reveal">Show answer</button></div><p class="orb-fb" aria-live="polite"></p>`;
+  $("#orb-reveal").onclick = () => {
+    Q.querySelector(".actions").innerHTML = `<p style="flex-basis:100%;margin:0"><b>${esc(answer)}</b></p><button class="teal" id="orb-knew">I knew it</button><button class="plain" id="orb-not">Not yet</button>`;
+    $("#orb-knew").onclick = () => result(s, true, Q); $("#orb-not").onclick = () => result(s, false, Q);
+  };
+}
+const CHEERS = ["Nailed it!","Stellar!","Orbit approves!","Supernova brain!","Right on target!"];
+function result(s, ok, Q, note){
+  const fb = Q.querySelector(".orb-fb"), o = S.orbit, g = gById(s.galaxy);
+  let up;
+  if (ok){
+    s.box = Math.min(3, s.box + 1); o.streak++; o.best = Math.max(o.best, o.streak);
+    const t = tutorAdd(s.galaxy, TUTOR_RIGHT);
+    fb.className = "orb-fb good";
+    fb.textContent = `${CHEERS[Math.floor(Math.random()*CHEERS.length)]} ${t ? `+${t} Orbit Tutor XP${g ? ` for ${g.name}` : ""}.` : g ? `Today's ${TUTOR_CAP} Orbit Tutor XP are all earned.` : ""}${o.streak >= 3 ? ` Streak ×${o.streak}!` : ""}`;
+    orbMood(o.streak >= 3 ? "stars" : "wow", "cheer", 1800, "hop");
+    orbSay(o.streak >= 3 ? `${o.streak} in a row! You're on fire.` : `Yes! That one's sticking.${s.box >= 3 ? " Fully remembered!" : ""}`);
+    up = orbGain(15 + Math.min(10, (o.streak-1)*2), 8);
+  } else {
+    s.box = 0; o.streak = 0;
+    fb.className = "orb-fb bad"; fb.textContent = note || "Not quite. Orbit will bring this one back soon.";
+    orbMood("oops","idle",1800,"shake"); orbSay(`No worries, I'll ask about <b>${esc(s.title)}</b> again soon.`);
+    up = orbGain(3, 4);
+  }
+  persist(); orbRestat(); cheer(); if (up) levelUp(up);
+  const next = document.createElement("div"); next.className = "actions"; next.style.justifyContent = "flex-start";
+  if (sess.mode === "daily"){
+    sess.marks[sess.n] = ok; const d = Q.querySelectorAll(".orb-dots i")[sess.n]; if (d) d.className = ok ? "ok" : "no";
+    const last = sess.n === sess.list.length - 1;
+    next.innerHTML = `<button class="${last ? "gold" : "fill"}" id="orb-next">${last ? "See my score" : "Next question"}</button>`;
+    next.firstChild.onclick = () => { if (last) finishDaily(); else { sess.n++; ask(); } };
+  } else { next.innerHTML = `<button class="fill" id="orb-next">Next question</button>`; next.firstChild.onclick = ask; }
+  Q.appendChild(next);
+}
+function finishDaily(){
+  const right = sess.marks.filter(Boolean).length, n = sess.list.length, o = S.orbit, t = todayISO();
+  o.daily.days = o.daily.last && daysBetween(o.daily.last, t) === 1 ? o.daily.days + 1 : 1; o.daily.last = t;
+  const gals = [...new Set(sess.list.map(s => s.galaxy).filter(id => gById(id)))];
+  let bonus = 0; gals.forEach((id,i) => { bonus += tutorAdd(id, Math.floor(TUTOR_DAILY/gals.length) + (i < TUTOR_DAILY % gals.length ? 1 : 0)); });
+  const up = orbGain(20, 15);
+  persist(); orbRestat(); cheer(); if (up) levelUp(up);
+  sess = null;
+  const line = right === n ? "A perfect launch!" : right >= n-1 ? "So close to perfect!" : right >= n/2 ? "Good flight!" : "Every quiz makes it stick.";
+  $("#orb-quiz").innerHTML = `<div class="orb-done" style="display:flex;flex-direction:column;gap:.6rem;align-items:flex-start"><p class="kick">Daily quiz complete</p><span class="big num">${right} / ${n}</span><p class="qq" style="margin:0">${line}</p>
+    <p style="margin:0">${bonus ? `+${bonus} Orbit Tutor XP bonus, shared by ${gals.map(id => esc(gById(id).name)).join(", ")}.` : `Today's ${TUTOR_CAP} Orbit Tutor XP are all earned.`} Day streak: <b>${o.daily.days}</b>.</p>
+    <div class="actions" style="justify-content:flex-start"><button class="fill" id="orb-more">Keep practicing</button></div></div>`;
+  $("#orb-more").onclick = startFree;
+  orbMood(right >= n-1 ? "stars" : "happy", "cheer", 3000, "hop");
+  orbSay(`${right} out of ${n}! Day streak <b>${o.daily.days}</b>. See you tomorrow!`);
+}
+
+// ---- Wiring, after the page is drawn ----
+function orbitMount(daily){
+  if (!$("#orb-panel")) return;
+  if (orbTab === "feed" && $("#o-feed")) feedMount();
+  else if (orbTab === "pantry") pantryMount();
+  else if (orbTab === "gear") gearMount();
+  else if (orbTab === "quiz" && $("#orb-quiz")){ if (daily) startDaily(); else if (sess && sess.mode === "daily") { $("#orb-qtitle").textContent = "Daily quiz"; ask(); } else startFree(); }
+}
+function orbGo(tabName, daily){ view = "orbit"; orbTab = tabName; if (daily) sess = null; render(daily); scrollTo({top:0}); }
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-orb],[data-orbtab],[data-otype]"); if (!b) return;
+  if (b.dataset.otype){ orbType = b.dataset.otype; orbImg = null; const gal = $("#o-gal")?.value; $("#orb-panel").innerHTML = feedHTML(); feedMount(); if (gal) $("#o-gal").value = gal; return; }
+  if (b.dataset.orbtab){ if (b.dataset.orbtab !== "quiz") sess = sess && sess.mode === "daily" ? sess : null; orbTab = b.dataset.orbtab; render(); return; }
+  const a = b.dataset.orb;
+  if (a === "talk"){ const tips = orbTips(compute()); const tip = tips[++orbTalkI % tips.length]; orbSay(tip.html, tip.btn); orbMood(tip.face, "wave", 2000, "hop"); }
+  else if (a === "open") orbGo(S.snacks.length ? "quiz" : "feed");
+  else if (a === "daily") orbGo("quiz", true);
+  else if (a === "feed") orbGo("feed");
+});
 
 // ---------------- Taps ----------------
 function openGalaxy(id){ const g = gById(id); if (g) galaxySheet(g); }

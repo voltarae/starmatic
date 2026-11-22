@@ -15,6 +15,18 @@ Starmatic was called Goal Galaxy. Goal Galaxy (and Syllabus Quest) files open in
 - **Study log**: self-study (20 XP an hour), workshops (30 XP an hour), certificates (250 XP more).
 - **Your level**: each time a galaxy levels up you earn XP equal to its new level; level L to L+1 takes (L+3) × 25, Skyrim's own formula.
 
+## Orbit, your star bot
+
+Orbit is a little pixel-art space robot who lives in your sky. She tells you the one thing worth doing next (an overdue quest, what's due this week and how much it's worth, a galaxy that's close to leveling up), and she helps you remember what you learn.
+
+- **Feed her snacks.** A snack is a short note of something you learned, filed under a galaxy: a fact, a term, a list of key points, steps in order, a picture, a formula, an important person, or a date. Paste bulleted or numbered notes and she picks the right kind.
+- **She quizzes you.** Pick the answer, name the picture or the person, fill in a missing point, tap steps or dates into order. She brings back what you miss sooner.
+- **Daily quiz.** Five questions a day, from what you know least, with a day streak.
+- **Orbit Tutor XP.** Each right answer gives 5 XP to the snack's galaxy, up to 50 a day including a 10 XP bonus for the daily quiz. It shows in the study log as its own kind, next to self-study and workshops.
+- **Just for fun:** star fuel, her own level, and gear she earns (a comet scarf, a bubble helmet, a turbo flame, a golden star).
+
+Snacks and Orbit are saved in your sky, so they're in your backups and your Google Drive copy. Pictures are shrunk to keep the file small. Orbit only talks while the game is open; she can't send notifications.
+
 ## Build a sky with AI or a worksheet
 
 Open **Guide** in the game. You don't have to type a sky in star by star:
