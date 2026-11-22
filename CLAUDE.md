@@ -40,7 +40,7 @@ npx playwright test
 
 ## Saved files
 
-A sky file is the game's own JSON: `{goalGalaxy:1, goal, galaxies, courses, study}`. Read
+A sky file is the game's own JSON: `{goalGalaxy:1, goal, galaxies, courses, study, snacks, orbit}`. Read
 `normalize()`, `friendly()` and `mergeSky()` in `index.html` before changing the shape; old files
 must keep opening. Ids of galaxies, stars, classes and quests are how "Add to my sky" matches
 things, so never renumber them in a file someone may already have loaded.

@@ -70,11 +70,11 @@ QUESTS:
 test("opens on the example sky with nothing broken", async ({ page }) => {
   const errs = errorsOf(page);
   await page.goto("./");
-  await expect(page.locator(".views .tab")).toHaveText(["🌌 Sky", "📚 Classes", "📖 Study log", "🧭 Guide", "💾 Save"]);
+  await expect(page.locator(".views .tab")).toHaveText(["🌌 Sky", "🤖 Orbit", "📚 Classes", "📖 Study log", "🧭 Guide", "💾 Save"]);
   const s = await sky(page);
   expect(s.example).toBe(true);
   expect(s.galaxies.length).toBeGreaterThan(2);
-  await tab(page, "classes"); await tab(page, "study"); await tab(page, "sky");
+  await tab(page, "orbit"); await tab(page, "classes"); await tab(page, "study"); await tab(page, "sky");
   await page.locator("g[data-g]").first().click();
   await expect(page.locator(".sheet-card")).toContainText("Stars: learning outcomes", { ignoreCase: true });
   expect(errs).toEqual([]);
@@ -254,7 +254,7 @@ test("opens with no connection after the first visit, sky and all", async ({ bro
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await new Promise(done => { server.closeAllConnections(); server.close(done); });   // the site is gone
   await page.reload();
-  await expect(page.locator(".views .tab")).toHaveCount(5);
+  await expect(page.locator(".views .tab")).toHaveCount(6);
   expect((await sky(page)).goal).toBe("Gaffer");
   expect(await page.evaluate(() => fetch("fonts/bebas-neue-latin-400-normal.woff2").then(r => r.ok))).toBe(true);
   expect(await page.evaluate(() => fetch("manifest.webmanifest").then(r => r.json()).then(m => m.name))).toBe("Starmatic");
@@ -483,4 +483,107 @@ test("Google Drive: a second device opens the sky, and neither device overwrites
   await tab(p1, "file"); await p1.getByText("🕓 History").click();
   await expect(p1.locator(".hist-row", { hasText: "Before adding the Google Drive copy" })).toHaveCount(1);
   await one.close(); await two.close();
+});
+
+// ---- Orbit, the star bot ----
+// MINE with a few snacks, the kind of thing a player feeds Orbit.
+const TERMS = { "Key light": "The main light on a subject", "Fill light": "A softer light that fills the shadows", "Back light": "A light behind the subject that separates it",
+  "Bounce": "Light reflected off a card or wall", "Flag": "A black card that blocks light", "Gel": "Colored film over a light" };
+const FED = { ...MINE, snacks: Object.entries(TERMS).map(([title, body], i) => ({ id: "s-" + i, type: "term", galaxy: "g-light", title, body })) };
+const tutorXp = page => page.evaluate(() => S.study.filter(e => e.kind === "tutor").reduce((n, e) => n + e.xp, 0));
+// Answers whatever Orbit is asking right now, right or wrong.
+async function answer(page, right = true){
+  const q = (await page.locator("#orb-quiz .qq").textContent()).match(/What does (.+) mean\?/)[1];
+  const opts = page.locator("#orb-quiz [data-oi]");
+  const pick = right ? opts.filter({ hasText: TERMS[q] }) : opts.filter({ hasNotText: TERMS[q] }).first();
+  await pick.click();
+}
+
+test("Orbit: snacks are fed from notes, filed under a galaxy, and kept in the sky", async ({ page }) => {
+  const errs = errorsOf(page);
+  await plant(page, MINE);
+  await expect(page.locator(".orb-stage.mini")).toContainText("Feed me a snack");
+  await tab(page, "orbit");
+  // a term
+  await page.locator("[data-otype=term]").click();
+  await page.locator("#o-gal").selectOption({ label: "💡 Lighting" });
+  await page.locator("#o-title").fill("Key light");
+  await page.locator("#o-body").fill("The main light on a subject");
+  await page.locator("#o-feed").click();
+  await expect(page.locator("#o-err")).toContainText("Fed!");
+  // pasted numbered notes become steps
+  await page.locator("[data-otype=list]").click();
+  await page.locator("#o-title").fill("Three-point lighting");
+  await page.locator("#o-body").focus();
+  await page.evaluate(() => { const b = document.querySelector("#o-body"); b.value = "1. Key light\n2. Fill light\n3. Back light"; b.dispatchEvent(new Event("paste")); });
+  await expect(page.locator("[data-otype=steps]")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#o-feed").click();
+  // a picture, shrunk to fit in the sky
+  await page.locator("[data-otype=picture]").click();
+  await page.locator("#o-title").fill("A waveform");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYPj/n4GBgYGJAQoAHxcCAu5j1jUAAAAASUVORK5CYII=", "base64");
+  await page.locator("#o-pic").setInputFiles({ name: "wave.png", mimeType: "image/png", buffer: png });
+  await expect(page.locator("#o-prev")).toBeVisible();
+  await page.locator("#o-feed").click();
+  const snacks = () => page.evaluate(() => S.snacks.map(s => [s.type, (S.galaxies.find(g => g.id === s.galaxy) || {}).name, s.title, s.items || s.body || s.img.slice(0, 15)]));
+  expect(await snacks()).toEqual([["term", "Lighting", "Key light", "The main light on a subject"],
+    ["steps", "Lighting", "Three-point lighting", ["Key light", "Fill light", "Back light"]], ["picture", "Lighting", "A waveform", "data:image/jpeg"]]);
+  await page.locator("[data-orbtab=pantry]").click();
+  await expect(page.locator(".orb-snack")).toHaveCount(3);
+  await page.reload();
+  expect(await snacks()).toHaveLength(3);
+  // they travel in the sky file: Add to my sky in another sky brings them, under the matching galaxy
+  const file = await page.evaluate(() => JSON.stringify({ goalGalaxy: 1, ...S }));
+  await plant(page, { ...MINE, galaxies: [{ ...MINE.galaxies[0], id: "other-id" }] });
+  const n = await page.evaluate(t => { const inc = readIncoming(t).sky; return mergeSky(inc); }, file);
+  expect(n.snacks).toBe(3);
+  expect(await page.evaluate(() => S.snacks.every(s => s.galaxy === "other-id"))).toBe(true);
+  expect(errs).toEqual([]);
+});
+
+test("Orbit's daily quiz gives Orbit Tutor XP to the galaxy, up to 50 a day", async ({ page }) => {
+  const errs = errorsOf(page);
+  await plant(page, FED);
+  await expect(page.locator(".orb-stage.mini")).toContainText("daily quiz");
+  await page.locator(".orb-stage.mini [data-orb=daily]").click();
+  await expect(page.locator("#orb-qtitle")).toHaveText("Daily quiz");
+  await expect(page.locator(".orb-dots i")).toHaveCount(5);
+  for (let i = 0; i < 5; i++){
+    await answer(page, i !== 2);                 // one wrong
+    if (i === 0){                                // the page redrawn mid-quiz (a Drive notice, going offline) moves on, not back
+      await page.evaluate(() => render());
+      await expect(page.locator(".orb-dots i").nth(1)).toHaveClass("now");
+      continue;
+    }
+    await page.locator("#orb-next").click();
+  }
+  await expect(page.locator(".orb-done")).toContainText("4 / 5");
+  expect(await tutorXp(page)).toBe(4 * 5 + 10);   // 5 for each right answer, and the daily bonus
+  expect((await sky(page)).galaxies[0].xp).toBe(30);
+  expect(await page.evaluate(() => [S.orbit.daily.days, S.orbit.daily.last === todayISO()])).toEqual([1, true]);
+  // the study log shows it as its own kind, not something to edit by hand
+  await tab(page, "study");
+  await expect(page.locator("[data-kind=tutor]")).toContainText("+30 XP");
+  await page.locator(".views [data-view=study]").click();
+  // more practice keeps earning until the day's 50
+  await tab(page, "orbit");
+  await page.locator("[data-orbtab=quiz]").click();
+  for (let i = 0; i < 6; i++){ await answer(page); await page.locator("#orb-next").click(); }
+  expect(await tutorXp(page)).toBe(50);
+  // and the daily quiz waits for tomorrow
+  await page.locator(".orb-stage [data-orb=daily]").click();
+  await expect(page.locator("#orb-quiz")).toContainText("You did today's quiz already");
+  await page.reload();
+  expect(await tutorXp(page)).toBe(50);
+  expect(errs).toEqual([]);
+});
+
+test("Orbit points out what's overdue and what's due soon", async ({ page }) => {
+  const day = n => { const d = new Date(Date.now() + n * 86400000); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+  const sky = JSON.parse(JSON.stringify(MINE));
+  sky.courses[0].quests[0].due = day(-2); sky.courses[0].quests[1].due = day(3);
+  await plant(page, sky);
+  await expect(page.locator(".orb-stage.mini")).toContainText("Light one face five ways slipped past its date");
+  await page.locator(".orb-stage.mini [data-orb=talk]").click();
+  await expect(page.locator(".orb-stage.mini")).toContainText("Read the handbook is due");
 });
