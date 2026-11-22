@@ -2446,7 +2446,15 @@ function orbitMount(daily){
   if (orbTab === "feed" && $("#o-feed")) feedMount();
   else if (orbTab === "pantry") pantryMount();
   else if (orbTab === "gear") gearMount();
-  else if (orbTab === "quiz" && $("#orb-quiz")){ if (daily) startDaily(); else if (sess && sess.mode === "daily") { $("#orb-qtitle").textContent = "Daily quiz"; ask(); } else startFree(); }
+  else if (orbTab === "quiz" && $("#orb-quiz")){
+    if (daily) startDaily();
+    else if (sess && sess.mode === "daily"){
+      // the page was redrawn mid-quiz (a Google Drive notice, going offline): pick up where it was, never asking an answered question twice
+      $("#orb-qtitle").textContent = "Daily quiz";
+      if (sess.marks[sess.n] !== undefined){ if (sess.n === sess.list.length - 1) return finishDaily(); sess.n++; }
+      ask();
+    } else startFree();
+  }
 }
 function orbGo(tabName, daily){ view = "orbit"; orbTab = tabName; if (daily) sess = null; render(daily); scrollTo({top:0}); }
 document.addEventListener("click", e => {

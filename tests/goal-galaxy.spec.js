@@ -550,6 +550,11 @@ test("Orbit's daily quiz gives Orbit Tutor XP to the galaxy, up to 50 a day", as
   await expect(page.locator(".orb-dots i")).toHaveCount(5);
   for (let i = 0; i < 5; i++){
     await answer(page, i !== 2);                 // one wrong
+    if (i === 0){                                // the page redrawn mid-quiz (a Drive notice, going offline) moves on, not back
+      await page.evaluate(() => render());
+      await expect(page.locator(".orb-dots i").nth(1)).toHaveClass("now");
+      continue;
+    }
     await page.locator("#orb-next").click();
   }
   await expect(page.locator(".orb-done")).toContainText("4 / 5");
