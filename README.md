@@ -25,7 +25,7 @@ Orbit is a little pixel-art space robot who lives in your sky. She tells you the
 - **Orbit Tutor XP.** Each right answer gives 5 XP to the snack's galaxy, up to 50 a day including a 10 XP bonus for the daily quiz. It shows in the study log as its own kind, next to self-study and workshops.
 - **Just for fun:** star fuel, her own level, and gear she earns (a comet scarf, a bubble helmet, a turbo flame, a golden star).
 
-Snacks and Orbit are saved in your sky, so they're in your backups and your Google Drive copy. Pictures are shrunk to keep the file small. Orbit only talks while the game is open; she can't send notifications.
+Snacks and Orbit are saved in your sky, so they're in your backups and your Starmatic account. You can give her another name: tap ✏️ beside her name on the Orbit tab. Pictures are shrunk to keep the file small. Orbit only talks while the game is open; she can't send notifications.
 
 ## Build a sky with AI or a worksheet
 
@@ -39,7 +39,7 @@ If you already have a sky, **Add to my sky** (in Guide and in Save) tells you wh
 
 ## Offline, and on your home screen
 
-After one visit, Starmatic opens with no connection: a small service worker (`sw.js`) keeps the page, fonts and icons on the device. When there is a connection it fetches the page fresh, so updates arrive the next time you open it. Everything you do offline is saved on the device, and with Google Drive connected, those changes go up to Drive as soon as the connection is back.
+After one visit, Starmatic opens with no connection: a small service worker (`sw.js`) keeps the page, fonts and icons on the device. When there is a connection it fetches the page fresh, so updates arrive the next time you open it. Everything you do offline is saved on the device, and with a Starmatic account connected, those changes go up to the account as soon as the connection is back.
 
 To use it like an app: on iPhone or iPad, open it in Safari, tap Share, then **Add to Home Screen**. On Android or a computer, use the browser's **Install** or **Add to Home screen** (there's also a button under **Save**). On iPhone and iPad the home-screen app keeps a sky of its own, separate from Safari's: download your file from **Save** first, then open it in the app.
 
@@ -54,26 +54,26 @@ Your sky lives in one browser on one device. Nothing backs it up for you.
 - After a week without a backup, a note at the top of the page reminds you, once a day at most.
 - **Save → History** keeps the last 30 copies of your sky in this browser: one before anything is opened or added, and one about every ten minutes while you play. Bring one back, or save it as a file. History lives in the same browser as your sky, so it undoes mistakes; it is not a backup.
 
-## Google Drive backup (optional)
+## Starmatic account (optional)
 
-With a Google client ID set, **Save → Google Drive** keeps a copy of the sky in the player's own Google Drive, in one file named `Starmatic sky.json`, and opens it on their other devices. Starmatic asks only for the `drive.file` permission, which lets it see the files it made itself and nothing else in the Drive. There is still no server: the page goes to Google to sign in and comes back with a pass that lasts about an hour. While the pass lasts, changes are sent a few seconds after they're made; after that the player taps **Reconnect**. If the Drive copy was changed on another device, nothing is overwritten: the player chooses to open it, add it to their sky, or replace it.
+**Save → Starmatic account** keeps your skies in a free account on voltarae.com, so they open on any device. Tap **Connect my account**: voltarae.com asks you to log in, or to make an account (your name and email, a quiet robot check, then a 6-digit code sent to your email and a password). Say yes to connecting this device, and you're back in the game.
 
-Nothing is loaded from Google or sent to it unless a player connects. To turn the feature on for your copy of the game:
+- Every change is still saved on the device first, and works offline. While connected, it's sent to your account a few seconds later, or when the connection comes back.
+- If another device saved the same sky since, nothing is overwritten: you choose to open the account's copy, add it to your sky, or keep this device's.
+- Your account page, **voltarae.com/starmatic/account/**, lists your skies. There you can play one, rename it, name your star bot, download a backup, bring back one of the last 15 versions, start a sky over, delete it, start a new sky, bring in a backup file, sign a device out, download everything, or delete your account.
+- The game and the account are on different sites, so the game doesn't use the site's log-in. Connecting gives this device a pass of its own (kept in this browser) that only works for Starmatic saves.
 
-1. In the [Google Cloud console](https://console.cloud.google.com/), make a project and enable the **Google Drive API**.
-2. Set up the consent screen (**Google Auth Platform**): app name, your email, audience **External**, and the scope `https://www.googleapis.com/auth/drive.file`. Publish it. This scope is one Google classes as non-sensitive.
-3. Under **Clients**, create a client of type **Web application**. Authorized JavaScript origin: `https://<you>.github.io`. Authorized redirect URI: the game's address exactly, with the slash at the end, such as `https://<you>.github.io/goal-galaxy/`.
-4. Put the client ID (it ends in `.apps.googleusercontent.com`) in `GOOGLE_CLIENT_ID` in `index.html`. A client ID is not a secret.
+The account side lives in the voltarae.com repo (`themes/volta/starmatic/`). The game talks to `https://voltarae.com` unless `window.STARMATIC_ACCOUNT` names another site. Nothing is sent there unless a player connects.
 
 ## Privacy and hosting
 
-Starmatic is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, and there's no server. Nothing is sent anywhere unless you choose to connect Google Drive, and then only to your own Drive. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
+Starmatic is one HTML page plus two fonts, with a manifest, icons and a service worker for offline use. It runs entirely in your browser: your sky is kept in the browser's local storage, and the game needs no server. Nothing is sent anywhere unless you choose to connect a Starmatic account, and then only to voltarae.com. Use **Save** to download a backup file or move your sky to another device. Old Syllabus Quest files open too.
 
 Because it's only static files, it's hosted free on GitHub Pages. To make your own copy, fork this repo and turn on Pages (Settings → Pages → Deploy from branch → `main`, `/ (root)`).
 
 ## Tests
 
-Every pull request runs the game in a real browser at phone size (`.github/workflows/tests.yml`): scoring, worksheets and AI answers, **Add to my sky**, backup and restore, and opening with no connection. Google Drive is tested with the test playing Google's part. To run them yourself:
+Every pull request runs the game in a real browser at phone size (`.github/workflows/tests.yml`): scoring, worksheets and AI answers, **Add to my sky**, backup and restore, and opening with no connection. The Starmatic account is tested with the test playing voltarae.com's part. To run them yourself:
 
 ```
 cd tests

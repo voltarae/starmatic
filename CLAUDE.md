@@ -13,11 +13,16 @@ It lives at voltarae.github.io/goal-galaxy. Volta works from an iPad; explain th
   (`goal-galaxy-v1`), with safety copies in IndexedDB (`goal-galaxy-safe`).
 - Inside the code the old name stays: the storage keys (`goal-galaxy-…`), the `goalGalaxy:1` mark in
   sky files and the test file name. Renaming them would strand players' skies.
-- Offline, every change is saved on the device. With Google Drive connected, changes made offline go up
+- Offline, every change is saved on the device. With a Starmatic account connected, changes made offline go up
   when the connection is back (the `online` event), or the next time the game opens.
 - Goals are build-your-own. Don't add preset skies to the game.
-- Google Drive backup is optional and off until `GOOGLE_CLIENT_ID` is set in `index.html`.
-  Nothing may be loaded from Google, or sent to it, before a player connects.
+- Starmatic accounts are optional: skies saved on voltarae.com (WordPress, in the voltarae.com repo under
+  `themes/volta/starmatic/`, API `/wp-json/starmatic/v1/`). Connecting sends the player to
+  `/starmatic/connect/`, which comes back with a device pass in the address (`#stm_token=…`); the game sends it
+  as `X-Starmatic-Token`. Saves carry `base` (the version this copy started from); a `409` means another device
+  saved first, and the player chooses. Nothing may be sent to voltarae.com before a player connects.
+  Google Drive was removed: Volta doesn't want players' skies in Google.
+- Orbit can be renamed (`S.orbit.name`, `ON()` in the code). The category "Orbit Tutor XP" keeps its name.
 
 ## Changing it
 
