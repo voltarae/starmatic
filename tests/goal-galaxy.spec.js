@@ -346,143 +346,155 @@ test("a week without a backup shows a reminder, once a day, until there is one",
   await expect(page.locator("#note")).toBeEmpty();
 });
 
-// ---- Google Drive (Google itself is played by the test) ----
-// One pretend Google account shared by every browser in a test: the sign-in page sends the browser straight
-// back with a pass, and the Drive holds at most one file.
-function pretendGoogle(){
-  const g = { file: null, n: 0, signedOut: false, saves: 0 };
-  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PATCH,OPTIONS" };
+// ---- Starmatic account (voltarae.com itself is played by the test) ----
+// One pretend account shared by every browser in a test: the connect page sends the browser straight back
+// with a device pass, and the saves API keeps each sky with a version number, like the real one.
+function pretendAccount(){
+  const a = { skies: {}, next: 1, signedOut: false, saves: 0, calls: [], devices: [] };
+  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS" };
   const json = (route, body, status = 200) => route.fulfill({ status, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(body) });
-  const stamp = () => new Date(Date.UTC(2026, 10, 14, 12, 0, ++g.n)).toISOString();
-  g.attach = async ctx => {
-    await ctx.addInitScript(() => { window.GOAL_GALAXY_GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"; });
-    await ctx.route("https://accounts.google.com/**", route => {
-      const q = new URL(route.request().url()).searchParams;
-      expect(q.get("client_id")).toBe("test-client.apps.googleusercontent.com");
-      expect(q.get("scope")).toBe("https://www.googleapis.com/auth/drive.file");
-      expect(q.get("response_type")).toBe("token");
-      route.fulfill({ status: 302, headers: { location: `${q.get("redirect_uri")}#access_token=pass-${g.n}&token_type=Bearer&expires_in=3599&scope=x&state=${q.get("state")}` } });
-    });
-    await ctx.route("https://www.googleapis.com/**", async route => {
+  const sum = s => ({ id: s.id, title: s.title, rev: s.rev, updated: s.updated, device: s.device, orbit: (s.data.orbit || {}).name || "", galaxies: (s.data.galaxies || []).length, snacks: (s.data.snacks || []).length });
+  a.put = (title, data, device = "") => { const id = a.next++; a.skies[id] = { id, title, rev: 1, updated: 1795800000 + a.next, device, data }; return id; };
+  a.attach = async ctx => {
+    await ctx.route("https://voltarae.com/**", async route => {
       const req = route.request(), url = new URL(req.url()), m = req.method();
+      a.calls.push(m + " " + url.pathname);
+      if (url.pathname === "/starmatic/connect/"){
+        a.devices.push(url.searchParams.get("device"));
+        const ret = url.searchParams.get("return"); expect(ret).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+        return route.fulfill({ status: 303, headers: { location: `${ret}#stm_token=7.ab12cd34.${"f".repeat(48)}&stm_state=${url.searchParams.get("state")}&stm_name=Robin` } });
+      }
       if (m === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
-      if (g.signedOut || !/^Bearer pass-/.test(req.headers().authorization || "")) return json(route, { error: "signed out" }, 401);
-      const id = (url.pathname.match(/\/files\/([^/]+)$/) || [])[1];
-      if (m === "GET" && !id) return json(route, { files: g.file ? [{ id: g.file.id, modifiedTime: g.file.modifiedTime }] : [] });
-      if (m === "GET" && (!g.file || id !== g.file.id)) return json(route, { error: "not found" }, 404);
-      if (m === "GET" && url.searchParams.get("alt") === "media") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "application/json" }, body: g.file.body });
-      if (m === "GET") return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime, trashed: false });
-      if (m === "POST"){ const parts = req.postData().split(/\r\n\r\n/); expect(JSON.parse(parts[1].split("\r\n")[0]).name).toBe("Starmatic sky.json");
-        g.file = { id: "file-1", modifiedTime: stamp(), body: parts[2].split(/\r\n--/)[0] }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
-      if (m === "PATCH" && g.file && id === g.file.id){ g.file = { ...g.file, modifiedTime: stamp(), body: req.postData() }; g.saves++; return json(route, { id: g.file.id, modifiedTime: g.file.modifiedTime }); }
-      return json(route, { error: "unexpected" }, 400);
+      if (a.signedOut || req.headers()["x-starmatic-token"] !== `7.ab12cd34.${"f".repeat(48)}`) return json(route, { message: "Log in" }, 401);
+      const p = url.pathname.replace("/wp-json/starmatic/v1/", ""), id = +((p.match(/^skies\/(\d+)/) || [])[1] || 0), s = a.skies[id];
+      if (p === "me") return json(route, { name: "Robin", skies: Object.values(a.skies).map(sum) });
+      if (p === "skies" && m === "POST"){ const b = req.postDataJSON(); const nid = a.put(b.title, b.data, "iPad"); a.saves++; return json(route, { ...sum(a.skies[nid]), data: b.data }, 201); }
+      if (id && !s) return json(route, { message: "That sky isn't in your account." }, 404);
+      if (id && m === "GET") return json(route, url.searchParams.get("meta") ? sum(s) : { ...sum(s), data: s.data });
+      if (id && m === "PUT"){ const b = req.postDataJSON();
+        if (b.base !== s.rev) return json(route, { code: "stm_clash", sky: { ...sum(s), data: s.data } }, 409);
+        Object.assign(s, { rev: s.rev + 1, data: b.data, updated: s.updated + 60, device: "this device" }); a.saves++; return json(route, sum(s)); }
+      return json(route, { message: "unexpected" }, 400);
     });
   };
-  g.sky = () => JSON.parse(g.file.body);
-  return g;
+  a.only = () => Object.values(a.skies)[0];
+  return a;
 }
+const connect = async page => { await tab(page, "file"); await page.locator("#x-acct-box summary").click(); await page.locator('#x-acct [data-a="connect"]').click(); };
 
-test("Google Drive isn't offered, and Google isn't contacted, until a client ID is set", async ({ page }) => {
-  const calls = []; page.on("request", r => { if (/google/.test(new URL(r.url()).hostname)) calls.push(r.url()); });
+test("Starmatic account: offered in Save, and nothing goes to voltarae.com until the player connects", async ({ page }) => {
+  const calls = []; page.on("request", r => { if (/voltarae\.com/.test(new URL(r.url()).hostname)) calls.push(r.url()); });
   await plant(page, MINE);
   await tab(page, "file");
-  await expect(page.locator(".sheet-card")).not.toContainText("Google Drive");
+  await expect(page.locator(".sheet-card")).toContainText("Starmatic account");
+  await page.locator("#x-acct-box summary").click();
+  await expect(page.locator("#x-acct")).toContainText("free Starmatic account on voltarae.com");
   await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
   await page.waitForTimeout(500);
   expect(calls).toEqual([]);
 });
 
-test("Google Drive: connect, save by itself, and pause when Google signs the page out", async ({ context, page }) => {
+test("Starmatic account: connect, the sky goes up and saves by itself, and a signed-out device says so", async ({ context, page }) => {
   const errs = []; page.on("pageerror", e => errs.push(String(e)));
-  const google = pretendGoogle(); await google.attach(context);
-  const calls = []; page.on("request", r => { if (/google/.test(new URL(r.url()).hostname)) calls.push(r.url()); });
+  const acct = pretendAccount(); await acct.attach(context);
   await plant(page, MINE);
-  expect(calls).toEqual([]);                                                 // nothing goes to Google before the player connects
-  await tab(page, "file");
-  await page.getByText("☁️ Google Drive").click();
-  await expect(page.locator("#x-drive")).toContainText("can only see the one file it makes");
-  await page.locator('#x-drive [data-d="connect"]').click();
-  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");   // back from Google, Save is open, the sky has gone up
+  expect(acct.calls).toEqual([]);
+  await connect(page);
+  await expect(page.locator("#x-acct")).toContainText("Connected as Robin. This device saves to “Gaffer”");   // back from voltarae.com, Save is open, the sky has gone up
   expect(new URL(page.url()).hash).toBe("");
-  expect(google.sky().goal.title).toBe("Gaffer");
-  await expect(page.locator("#x-last")).toContainText("(Google Drive)");
+  expect(acct.devices[0]).toMatch(/, /);                                     // the account page will name this device
+  expect(acct.only().data.goal.title).toBe("Gaffer");
+  await expect(page.locator("#x-last")).toContainText("(Starmatic account)");
   await page.locator('.sheet-card [data-close]').click();
   await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });      // a change is sent a few seconds later
-  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
-  google.signedOut = true;                                                   // about an hour later
+  await expect.poll(() => acct.only().data.galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
+  acct.signedOut = true;                                                     // signed out from the account page
   await page.evaluate(() => { S.galaxies[0].outcomes[1].mastered = true; commit(); });
-  await expect(page.locator("#note")).toContainText("Drive backup is paused", { timeout: 10000 });
-  expect(google.sky().galaxies[0].outcomes[1].mastered).toBe(false);
-  google.signedOut = false;
-  await page.locator('#note [data-act="drive-connect"]').click();            // Reconnect goes to Google and comes back
-  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
-  await page.locator('#x-drive [data-d="save"]').click();
-  await expect.poll(() => google.sky().galaxies[0].outcomes[1].mastered).toBe(true);
-  await page.locator('#x-drive [data-d="off"]').click();
-  await expect(page.locator("#x-drive")).toContainText("Connect Google Drive");
+  await expect(page.locator("#note")).toContainText("signed out of your Starmatic account", { timeout: 10000 });
+  expect(acct.only().data.galaxies[0].outcomes[1].mastered).toBe(false);
+  acct.signedOut = false;
+  await page.locator('#note [data-act="acct-connect"]').click();             // Connect again goes to voltarae.com and comes back
+  await expect(page.locator("#x-acct")).toContainText("Connected as Robin");
+  await page.locator('#x-acct [data-a="save"]').click();
+  await expect.poll(() => acct.only().data.galaxies[0].outcomes[1].mastered).toBe(true);
+  await page.locator('#x-acct [data-a="off"]').click(); await page.locator('#x-acct [data-a="off"]').click();
+  await expect(page.locator("#x-acct")).toContainText("Connect my account");
   expect(errs).toEqual([]);
 });
 
-test("offline: changes save on the device and go to Google Drive when the connection is back", async ({ context, page }) => {
+test("offline: changes save on the device and go to the Starmatic account when the connection is back", async ({ context, page }) => {
   const errs = []; page.on("pageerror", e => errs.push(String(e)));
-  const google = pretendGoogle(); await google.attach(context);
+  const acct = pretendAccount(); await acct.attach(context);
   await plant(page, MINE);
-  await tab(page, "file");
-  await page.getByText("☁️ Google Drive").click();
-  await page.locator('#x-drive [data-d="connect"]').click();
-  await expect(page.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
+  await connect(page);
+  await expect(page.locator("#x-acct")).toContainText("Connected as Robin");
   await page.locator('.sheet-card [data-close]').click();
-  const saves = google.saves;
+  const saves = acct.saves;
   await context.setOffline(true);
   await expect(page.locator("#toast")).toContainText("Offline");
   await page.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
-  await expect(page.locator("#note")).toContainText("You're offline. Everything is saved on this device, and your latest changes go to your Google Drive");
-  await page.waitForTimeout(5000);
-  expect(google.saves).toBe(saves);                                          // nothing tried while offline
+  await expect(page.locator("#note")).toContainText("You're offline. Everything is saved on this device, and your latest changes go to your Starmatic account");
+  await page.waitForTimeout(4500);
+  expect(acct.saves).toBe(saves);                                            // nothing tried while offline
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("goal-galaxy-v1")).galaxies[0].outcomes[0].mastered)).toBe(true);     // but it's kept on the device
   await context.setOffline(false);
-  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
+  await expect.poll(() => acct.only().data.galaxies[0].outcomes[0].mastered, { timeout: 10000 }).toBe(true);
   await expect(page.locator("#note")).not.toContainText("offline");
   expect(errs).toEqual([]);
 });
 
-test("Google Drive: a second device opens the sky, and neither device overwrites the other", async ({ browser }) => {
-  const google = pretendGoogle(), base = test.info().project.use.baseURL;
+test("Starmatic account: a second device opens the sky, and neither device overwrites the other", async ({ browser }) => {
+  const acct = pretendAccount(), base = test.info().project.use.baseURL;
   const one = await browser.newContext({ baseURL: base, viewport: { width: 390, height: 844 } }), two = await browser.newContext({ baseURL: base, viewport: { width: 390, height: 844 } });
-  await google.attach(one); await google.attach(two);
+  await acct.attach(one); await acct.attach(two);
   const p1 = await one.newPage(), p2 = await two.newPage();
-  const connect = async p => { await tab(p, "file"); await p.getByText("☁️ Google Drive").click(); await p.locator('#x-drive [data-d="connect"]').click(); };
-  // the iPad saves its sky to Drive
+  // the iPad saves its sky to the account
   await plant(p1, MINE); await connect(p1);
-  await expect(p1.locator("#x-drive")).toContainText("Connected. Saved to your Drive");
-  // the iMac has no sky yet: it's offered the Drive copy
+  await expect(p1.locator("#x-acct")).toContainText("This device saves to “Gaffer”");
+  // the iMac has no sky yet: it's offered the account's skies
   await p2.goto("./"); await connect(p2);
-  await expect(p2.locator("#x-drive")).toContainText("Your Drive has a sky saved");
-  await p2.locator('#x-drive [data-d="open"]').click();
-  await expect(p2.locator("#toast")).toContainText("Opened the sky from your Google Drive");
+  await expect(p2.locator("#x-acct")).toContainText("Your account has 1 sky");
+  await p2.locator('#x-acct [data-a^="open:"]').click();
+  await expect(p2.locator("#toast")).toContainText("Opened “Gaffer” from your account");
   expect((await sky(p2)).galaxies.map(g => g.name)).toEqual(["Lighting", "Grip"]);
   // the iMac adds a star, and it goes up
   await p2.evaluate(() => { S.galaxies[1].outcomes.push({ id: "o-new", text: "Rig a flag on a C-stand", mastered: false }); commit(); });
-  await expect.poll(() => google.sky().galaxies[1].outcomes.length, { timeout: 10000 }).toBe(2);
-  const saves = google.saves;
+  await expect.poll(() => acct.only().data.galaxies[1].outcomes.length, { timeout: 10000 }).toBe(2);
+  const saves = acct.saves;
   // back on the iPad, which hasn't seen that: a change there must not overwrite the iMac's work
   await p1.locator('.sheet-card [data-close]').click();
   await p1.evaluate(() => { S.galaxies[0].outcomes[0].mastered = true; commit(); });
-  await expect(p1.locator("#note")).toContainText("newer sky from another device", { timeout: 10000 });
-  expect(google.saves).toBe(saves);
+  await expect(p1.locator("#note")).toContainText("newer copy of this sky", { timeout: 10000 });
+  expect(acct.saves).toBe(saves);
   await p1.locator('#note [data-view="file"]').click();
-  await expect(p1.locator("#x-drive")).toContainText("this browser hasn't opened");
-  await p1.locator('#x-drive [data-d="add"]').click();                        // take the iMac's star, keep the iPad's progress, send the result up
+  await expect(p1.locator("#x-acct")).toContainText("this device hasn't opened");
+  await p1.locator('#x-acct [data-a="add"]').click();                         // take the iMac's star, keep the iPad's progress, send the result up
   await expect(p1.locator("#toast")).toContainText("Added 1 star");
   const s = await sky(p1);
   expect(s.galaxies[0].stars[0]).toBe("Light a face ✓");
   expect(s.galaxies[1].stars).toEqual(["Flag a light", "Rig a flag on a C-stand"]);
-  await expect.poll(() => google.sky().galaxies[0].outcomes[0].mastered).toBe(true);
-  expect(google.sky().galaxies[1].outcomes.length).toBe(2);
+  await expect.poll(() => acct.only().data.galaxies[0].outcomes[0].mastered).toBe(true);
+  expect(acct.only().data.galaxies[1].outcomes.length).toBe(2);
   // and the copy the iPad had before is in its History
   await tab(p1, "file"); await p1.getByText("🕓 History").click();
-  await expect(p1.locator(".hist-row", { hasText: "Before adding the Google Drive copy" })).toHaveCount(1);
+  await expect(p1.locator(".hist-row", { hasText: "Before adding your account's copy" })).toHaveCount(1);
   await one.close(); await two.close();
+});
+
+test("Starmatic account: Play on the account page opens that sky, connecting first if needed", async ({ context, page }) => {
+  const errs = []; page.on("pageerror", e => errs.push(String(e)));
+  const acct = pretendAccount(); await acct.attach(context);
+  const spanish = acct.put("Spanish", { goalGalaxy: 1, goal: { title: "Speak Spanish", why: "" }, galaxies: [{ id: "g-es", name: "Verbs", emoji: "🗣️", color: "Teal", target: 40, outcomes: [] }], courses: [], study: [], snacks: [], orbit: { name: "Luna", xp: 10 } });
+  await plant(page, MINE);
+  await page.goto("./?stm_sky=" + spanish);                                  // not connected here: connects, then opens Spanish
+  await expect(page.locator("#toast")).toContainText("Opened “Spanish” from your account");
+  expect(new URL(page.url()).search).toBe("");
+  expect((await sky(page)).goal).toBe("Speak Spanish");
+  await expect(page.locator('.views [data-view="orbit"]')).toContainText("Luna");     // her name came along
+  // the sky that was on this device is kept in History
+  await tab(page, "file"); await page.getByText("🕓 History").click();
+  await expect(page.locator(".hist-row", { hasText: "Before opening a sky from your account" })).toHaveCount(1);
+  expect(errs).toEqual([]);
 });
 
 // ---- Orbit, the star bot ----
@@ -550,7 +562,7 @@ test("Orbit's daily quiz gives Orbit Tutor XP to the galaxy, up to 50 a day", as
   await expect(page.locator(".orb-dots i")).toHaveCount(5);
   for (let i = 0; i < 5; i++){
     await answer(page, i !== 2);                 // one wrong
-    if (i === 0){                                // the page redrawn mid-quiz (a Drive notice, going offline) moves on, not back
+    if (i === 0){                                // the page redrawn mid-quiz (an account notice, going offline) moves on, not back
       await page.evaluate(() => render());
       await expect(page.locator(".orb-dots i").nth(1)).toHaveClass("now");
       continue;
@@ -586,4 +598,28 @@ test("Orbit points out what's overdue and what's due soon", async ({ page }) => 
   await expect(page.locator(".orb-stage.mini")).toContainText("Light one face five ways slipped past its date");
   await page.locator(".orb-stage.mini [data-orb=talk]").click();
   await expect(page.locator(".orb-stage.mini")).toContainText("Read the handbook is due");
+});
+
+test("Orbit: name your star bot, and the name stays with the sky", async ({ page }) => {
+  const errs = errorsOf(page);
+  await plant(page, FED);
+  await tab(page, "orbit");
+  await page.locator('[data-orb="name"]').click();
+  await page.locator("#on-name").fill("Nova");
+  await page.locator("#on-save").click();
+  await expect(page.locator("#toast")).toContainText("Say hi to Nova!");
+  await expect(page.locator('.views [data-view="orbit"]')).toContainText("Nova");
+  await expect(page.locator(".orb-name h3")).toContainText("Nova");
+  await page.reload();
+  await expect(page.locator('.views [data-view="orbit"]')).toContainText("Nova");
+  const file = await page.evaluate(() => JSON.parse(JSON.stringify({ goalGalaxy: 1, ...S })));
+  expect(file.orbit.name).toBe("Nova");
+  // an empty name is Orbit again; and "Orbit Tutor XP" keeps its name either way
+  await tab(page, "orbit");
+  await page.locator('[data-orb="name"]').click();
+  await page.locator("#on-name").fill("");
+  await page.locator("#on-save").click();
+  await expect(page.locator('.views [data-view="orbit"]')).toContainText("Orbit");
+  await expect(page.locator(".orb-stage")).toContainText("Orbit Tutor XP today");
+  expect(errs).toEqual([]);
 });

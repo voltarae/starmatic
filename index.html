@@ -18,8 +18,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%230b2725'/%3E%3Crect x='7' y='2' width='2' height='12' fill='%239eddd8'/%3E%3Crect x='2' y='7' width='12' height='2' fill='%239eddd8'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23fff'/%3E%3C/svg%3E">
 <!-- Starmatic by Volta Rae (voltarae.com). Free and open source under the MIT License.
      One self-contained page: everything runs in the visitor's browser. Your sky is kept in this
-     browser (localStorage) and can be saved to / opened from a .json file. Nothing is sent anywhere,
-     and nothing loads from other sites except the two fonts beside this file. -->
+     browser (localStorage) and can be saved to / opened from a .json file. Nothing is sent anywhere
+     unless you connect a Starmatic account (voltarae.com), and nothing loads from other sites except
+     the two fonts beside this file. -->
 <style>
 @font-face{font-family:'Bebas Neue';font-weight:400;font-display:swap;src:url(fonts/bebas-neue-latin-400-normal.woff2) format('woff2')}
 @font-face{font-family:'Courier Prime';font-weight:400;font-display:swap;src:url(fonts/courier-prime-latin-400-normal.woff2) format('woff2')}
@@ -51,6 +52,8 @@ button.teal:active,button.fill:active{transform:translate(2px,2px);box-shadow:1p
 button.fill{box-shadow:3px 3px 0 var(--teal)}
 button.plain{border-color:var(--rule)}
 button:disabled{opacity:.45;cursor:default}
+a.btnlink{display:inline-block;border:2px solid var(--rule);padding:.5rem .9rem;font-weight:700;text-decoration:none}
+.acct-list{list-style:none;margin:.4rem 0;padding:0}.acct-list li{display:flex;justify-content:space-between;align-items:center;gap:.6rem;border-bottom:1px solid var(--rule);padding:.45rem 0}
 input,select,textarea{background:var(--paper);border:2px solid var(--ink);padding:.45rem .6rem;width:100%;min-width:0;border-radius:0}
 textarea{line-height:1.4}
 .num{font-variant-numeric:tabular-nums}
@@ -276,6 +279,7 @@ details summary{cursor:pointer;font-weight:700}
 .orb-side{display:flex;flex-direction:column;gap:.7rem}
 .orb-name{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
 .orb-name h3{font-size:2.6rem;color:#fff}
+.orb-rename{background:none;border:0;padding:0 .2rem;font-size:1.1rem;vertical-align:middle;cursor:pointer;box-shadow:none}
 .orb-name .lv{font-family:var(--head);font-size:1.5rem;color:#f6c35a}
 .orb-meter{display:grid;gap:.2rem}
 .orb-meter .lab{display:flex;justify-content:space-between;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
@@ -837,7 +841,7 @@ function persist(){
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ toast("This browser won't keep data. Save a file to keep your work."); }
   touched();
   if (Date.now() - safeAt > SAFE_EVERY) safeCopy("While you played");
-  driveSoon();
+  acctSoon();
 }
 function snapshot(){ const r = compute(); return {level:r.level, g:Object.fromEntries(S.galaxies.map(g => [g.id, {lv:r.gx[g.id].level, locked:r.gx[g.id].locked}]))}; }
 function commit(){
@@ -917,9 +921,9 @@ function exampleSky(){
 
 // ---------------- Drawing: the top tabs ----------------
 function render(daily){
-  const tabs = [["sky","🌌 Sky"],["orbit","🤖 Orbit"],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
+  const tabs = [["sky","🌌 Sky"],["orbit","🤖 " + esc(ON())],["classes","📚 Classes"],["study","📖 Study log"],["guide","🧭 Guide"],["file","💾 Save"]];
   $("#views").innerHTML = tabs.map(([k,n]) => `<button class="tab" data-view="${k}" aria-pressed="${k===view}">${n}</button>`).join("");
-  $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : (driveNote() || backupNote());
+  $("#note").innerHTML = S.example ? `<div class="note"><span>👋 This is an example sky: tap around and try it. Nothing is kept until you start your own.</span><button class="fill" data-act="own">Start my sky</button></div>` : (acctNote() || backupNote());
   const r = compute();
   $("#game").innerHTML = view === "classes" ? classesView(r) : view === "study" ? studyView(r) : view === "orbit" ? orbitView(r) : skyView(r);
   if (view === "orbit") orbitMount(daily);
@@ -1631,6 +1635,10 @@ function mergeSky(inc){
   for (const e of inc.study) if (!S.study.some(x => x.id === e.id)){
     S.study.push({...e, galaxy: gmap[e.galaxy] || "", outcome: e.outcome ? omap[e.outcome] || null : null}); n.study++; }
   for (const x of inc.snacks || []) if (!S.snacks.some(y => y.id === x.id)){ S.snacks.push({...x, galaxy: gmap[x.galaxy] || ""}); n.snacks++; }
+  // the star bot keeps the best of both: her XP, her best answer streak, the gear she wears, and a name if she had none
+  const o = inc.orbit, me = S.orbit;
+  if (o && me){ me.xp = Math.max(me.xp, o.xp || 0); me.best = Math.max(me.best, o.best || 0);
+    me.wear = [...new Set([...(me.wear || []), ...(o.wear || [])])]; if (!me.name && o.name) me.name = o.name; }
   return n;
 }
 function mergeCount(inc){ const keep = S; S = JSON.parse(JSON.stringify(S)); try { return mergeSky(inc); } finally { S = keep; } }
@@ -1723,7 +1731,7 @@ async function keepLine(el){
 if (isApp() && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 // ---------------- Backups: when the last one was, and a nudge when it's been a while ----------------
-// Small notes kept beside the sky: when it last changed, when it was last backed up and how, Drive settings.
+// Small notes kept beside the sky: when it last changed, when it was last backed up and how, the account this device saves to.
 const META_KEY = "goal-galaxy-meta", DAY = 86400000, NUDGE_DAYS = 7;
 const meta = () => { try { return JSON.parse(localStorage.getItem(META_KEY)) || {}; } catch(err){ return {}; } };
 const setMeta = patch => { try { localStorage.setItem(META_KEY, JSON.stringify({...meta(), ...patch})); } catch(err){} };
@@ -1799,118 +1807,147 @@ async function safeRescue(){
   } catch(err){}
 }
 
-// ---------------- Google Drive backup (optional) ----------------
-// Off until a Google OAuth client ID is set on the next line (README: "Google Drive backup").
-// With one set, Save offers to keep a copy of the sky in the player's own Google Drive, in one file
-// named "Starmatic sky.json". The drive.file permission lets Starmatic see only files it made itself.
-// There is no server: the page goes to Google to sign in and comes back with a pass that lasts about
-// an hour. While the pass lasts, every change is sent up a few seconds later. After that the player
-// taps Reconnect. Nothing is loaded from Google, or sent to it, unless the player connects.
-const GOOGLE_CLIENT_ID = window.STARMATIC_GOOGLE_CLIENT_ID || window.GOAL_GALAXY_GOOGLE_CLIENT_ID || "";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file", DRIVE_FILE = "Starmatic sky.json";
-const DRIVE_API = "https://www.googleapis.com/drive/v3/files", DRIVE_UP = "https://www.googleapis.com/upload/drive/v3/files";
-const DRIVE_TOKEN = "goal-galaxy-drive-token", DRIVE_STATE = "goal-galaxy-drive-state";
-const driveOn = () => !!GOOGLE_CLIENT_ID;
-const driveSet = () => (driveOn() && meta().drive) || null;        // {fileId, seen: the Drive file's version this browser last saved or opened, savedAt}
-function driveToken(){ try { const t = JSON.parse(sessionStorage.getItem(DRIVE_TOKEN)); return t && t.exp > Date.now() + 30000 ? t.token : null; } catch(err){ return null; } }
-function driveConnect(){
-  const state = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
-  localStorage.setItem(DRIVE_STATE, state);
-  location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({client_id:GOOGLE_CLIENT_ID,
-    redirect_uri:location.origin + location.pathname.replace(/index\.html$/, ""), response_type:"token", scope:DRIVE_SCOPE, include_granted_scopes:"true", state}));
+// ---------------- Starmatic account (optional) ----------------
+// A free Starmatic account on voltarae.com keeps your skies there, so they open on any device. The game
+// stays one page on this site: connecting sends you to voltarae.com to log in or sign up, and you come back
+// with a pass for this device (kept in this browser, until you disconnect or sign the device out from your
+// account page). Every change is saved here first; while connected it's sent a few seconds later, or when
+// the connection comes back. If another device saved the same sky since, nothing is overwritten: you choose.
+// Nothing is sent to voltarae.com unless you connect.
+const ACCT = String(window.STARMATIC_ACCOUNT || "https://voltarae.com").replace(/\/+$/, "");
+const ACCT_TOKEN = "goal-galaxy-acct-token", ACCT_STATE = "goal-galaxy-acct-state";
+const acctSet = () => meta().acct || null;     // {name, sky: the account's sky id this device saves to (0: a new one on the next save), rev, title, savedAt}
+const acctToken = () => { try { return localStorage.getItem(ACCT_TOKEN) || ""; } catch(err){ return ""; } };
+const acctPatch = p => setMeta({acct:{...(acctSet() || {}), ...p}});
+const acctPage = () => ACCT + "/starmatic/account/";
+function deviceName(){
+  const u = navigator.userAgent, ipad = /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1);
+  const kind = ipad ? "iPad" : /iPhone/.test(u) ? "iPhone" : /Android/.test(u) ? "Android" : /Mac/.test(u) ? "Mac" : /Windows/.test(u) ? "Windows" : /CrOS/.test(u) ? "Chromebook" : "Computer";
+  const app = isApp() ? "home-screen app" : /Edg\//.test(u) ? "Edge" : /Firefox\//.test(u) ? "Firefox" : /Chrome\/|CriOS/.test(u) ? "Chrome" : /Safari\//.test(u) ? "Safari" : "browser";
+  return `${kind}, ${app}`;
 }
-// Coming back from Google, the address ends in #access_token=…&state=…
-function driveReturn(){
-  if (!/(^#|&)(access_token|error)=/.test(location.hash)) return "";
-  const p = new URLSearchParams(location.hash.slice(1)), want = localStorage.getItem(DRIVE_STATE);
-  history.replaceState(null, "", location.pathname + location.search); localStorage.removeItem(DRIVE_STATE);
-  if (!driveOn() || !want || p.get("state") !== want) return "";
-  if (!p.get("access_token")) return "refused";
-  sessionStorage.setItem(DRIVE_TOKEN, JSON.stringify({token:p.get("access_token"), exp:Date.now() + (+p.get("expires_in") || 3600) * 1000}));
-  setMeta({drive:{...(meta().drive || {})}});
+function acctConnect(){
+  const state = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
+  try { localStorage.setItem(ACCT_STATE, state); } catch(err){}
+  location.assign(ACCT + "/starmatic/connect/?" + new URLSearchParams({return:location.origin + location.pathname.replace(/index\.html$/, ""), state, device:deviceName()}));
+}
+// Coming back from voltarae.com, the address ends in #stm_token=…&stm_state=…&stm_name=…
+function acctReturn(){
+  if (!/(^#|&)stm_token=/.test(location.hash)) return "";
+  const p = new URLSearchParams(location.hash.slice(1)); let want = "";
+  try { want = localStorage.getItem(ACCT_STATE); localStorage.removeItem(ACCT_STATE); } catch(err){}
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!want || p.get("stm_state") !== want) return "";
+  try { localStorage.setItem(ACCT_TOKEN, p.get("stm_token")); } catch(err){ return ""; }
+  const was = acctSet();
+  setMeta({acct:{name:p.get("stm_name") || "", sky:was && (!was.name || was.name === p.get("stm_name")) ? was.sky : null, rev:was ? was.rev : 0, title:was ? was.title : "", savedAt:was ? was.savedAt : null}});
+  acctClash = null;
   return "connected";
 }
-function driveOff(){ sessionStorage.removeItem(DRIVE_TOKEN); setMeta({drive:null}); driveClash = null; }
-async function driveFetch(url, opts = {}){
-  const out = () => Object.assign(new Error("Google has signed this page out."), {signedOut:true});
-  const token = driveToken(); if (!token) throw out();
-  const r = await fetch(url, {...opts, headers:{Authorization:"Bearer " + token, ...(opts.headers || {})}});
-  if (r.status === 401){ sessionStorage.removeItem(DRIVE_TOKEN); throw out(); }
-  if (!r.ok) throw new Error(`Google Drive answered ${r.status}.`);
-  return r;
+// The account page's Play button opens Starmatic with ?stm_sky=<id>
+function acctAsked(){
+  const q = new URLSearchParams(location.search), id = +q.get("stm_sky");
+  if (!q.has("stm_sky")) return 0;
+  q.delete("stm_sky"); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+  return id > 0 ? id : 0;
 }
-// The sky file in this Drive, or null: {id, modifiedTime}
-async function driveLook(){
-  const st = driveSet();
-  if (st && st.fileId){
-    const r = await fetch(`${DRIVE_API}/${st.fileId}?fields=id,modifiedTime,trashed`, {headers:{Authorization:"Bearer " + (driveToken() || "")}});
-    if (r.ok){ const f = await r.json(); if (!f.trashed) return f; }
-    else if (r.status === 401){ sessionStorage.removeItem(DRIVE_TOKEN); throw Object.assign(new Error("Google has signed this page out."), {signedOut:true}); }
-  }
-  const q = new URLSearchParams({q:`name = '${DRIVE_FILE}' and trashed = false`, fields:"files(id,modifiedTime)", orderBy:"modifiedTime desc", pageSize:"1", spaces:"drive"});
-  return ((await (await driveFetch(`${DRIVE_API}?${q}`)).json()).files || [])[0] || null;
+function acctOff(){ try { localStorage.removeItem(ACCT_TOKEN); } catch(err){} setMeta({acct:null}); acctClash = null; }
+async function acctFetch(path, method = "GET", body){
+  const out = () => Object.assign(new Error("This device was signed out of your Starmatic account."), {signedOut:true});
+  const token = acctToken(); if (!token) throw out();
+  const r = await fetch(`${ACCT}/wp-json/starmatic/v1/${path}`, {method, headers:{"X-Starmatic-Token":token, "Content-Type":"application/json"}, body:body === undefined ? undefined : JSON.stringify(body)});
+  let j = null; try { j = await r.json(); } catch(err){}
+  if (r.status === 401){ try { localStorage.removeItem(ACCT_TOKEN); } catch(err){} throw out(); }
+  if (r.status === 409 && j && j.sky) return {clash:j.sky};
+  if (!r.ok) throw Object.assign(new Error((j && j.message) || `Your account answered ${r.status}.`), {status:r.status});
+  return j;
 }
-// Send the sky up. If the Drive copy changed somewhere else since this browser last saw it, nothing is
-// sent and {clash} comes back, unless force is set.
-async function driveSave(force){
-  const text = JSON.stringify({goalGalaxy:1, ...S}), st = driveSet() || {}, there = await driveLook();
-  if (there && !force && st.seen !== there.modifiedTime) return {clash:there};
-  let f;
-  if (there) f = await (await driveFetch(`${DRIVE_UP}/${there.id}?uploadType=media&fields=id,modifiedTime`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:text})).json();
-  else { const edge = "goalgalaxy" + Date.now();
-    const body = `--${edge}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:DRIVE_FILE, mimeType:"application/json"})}\r\n--${edge}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${edge}--`;
-    f = await (await driveFetch(`${DRIVE_UP}?uploadType=multipart&fields=id,modifiedTime`, {method:"POST", headers:{"Content-Type":`multipart/related; boundary=${edge}`}, body})).json(); }
-  setMeta({drive:{fileId:f.id, seen:f.modifiedTime, savedAt:nowISO()}}); backedUp("Google Drive"); driveClash = null;
-  return {saved:f};
+const acctFile = () => ({goalGalaxy:1, ...S});
+function acctSaw(sky){ acctPatch({sky:sky.id, rev:sky.rev, title:sky.title, savedAt:nowISO()}); backedUp("Starmatic account"); acctClash = null; }
+// Send the sky up. If another device saved this sky since this one last did, nothing is sent and
+// {clash} comes back, unless over is the account's version to replace.
+async function acctSave(over){
+  const st = acctSet() || {};
+  if (!st.sky){ const made = await acctFetch("skies", "POST", {title:S.goal.title || "My sky", data:acctFile()}); acctSaw(made); return {saved:made}; }
+  let r;
+  try { r = await acctFetch(`skies/${st.sky}`, "PUT", {data:acctFile(), base:over != null ? over : st.rev || 0}); }
+  catch(err){ if (err.status === 404){ acctPatch({sky:0}); return acctSave(); } throw err; }     // deleted on the account page: saved as a new sky
+  if (r.clash){ acctClash = r.clash; return r; }
+  acctSaw(r); return {saved:r};
 }
-async function driveRead(there){ return readIncoming(await (await driveFetch(`${DRIVE_API}/${there.id}?alt=media`)).text()).sky; }
-function driveSeen(there){ setMeta({drive:{fileId:there.id, seen:there.modifiedTime, savedAt:nowISO()}}); backedUp("Google Drive"); driveClash = null; }
-// After each change, a few seconds later, while connected.
-let driveT = 0, driveClash = null;
-// With no connection nothing is tried: the sky is already saved on this device, and the change is
-// sent when the connection comes back ("online" below), or the next time the game opens.
-const drivePending = () => { const st = driveSet(); return !!st && !S.example && (!st.savedAt || meta().changedAt > st.savedAt); };
-function driveSoon(){
-  if (!driveSet() || !driveToken() || S.example || !navigator.onLine) return;
-  clearTimeout(driveT);
-  driveT = setTimeout(async () => { try { const r = await driveSave(false); if (r.clash && !driveClash){ driveClash = r.clash; render(); } } catch(err){ if (err.signedOut) render(); } }, 4000);
+// Open one of the account's skies on this device (a safety copy of this one first).
+async function acctOpen(id){
+  const sky = await acctFetch(`skies/${id}`), mine = hasSky();
+  if (mine) safeCopy("Before opening a sky from your account");
+  openSky(readIncoming(JSON.stringify(sky.data)).sky);
+  acctSaw(sky);                                    // after openSky, so opening isn't counted as a change to send
+  toast(`☁️ Opened “${sky.title}” from your account`);
 }
-function driveNote(){
-  const st = driveSet(); if (!st || S.example) return "";
-  if (!navigator.onLine) return `<div class="note"><span>📴 You're offline. Everything is saved on this device${drivePending() ? ", and your latest changes go to your Google Drive when you're back online" : ""}.</span></div>`;
-  if (driveClash) return `<div class="note"><span>☁️ Your Google Drive has a newer sky from another device. Nothing has been overwritten.</span><button class="fill" data-view="file">Choose</button></div>`;
-  const m = meta();
-  if (!driveToken() && hasSky() && m.nudgedOn !== todayISO() && (!st.savedAt || m.changedAt > st.savedAt))
-    return `<div class="note"><span>☁️ Drive backup is paused. Google signs this page out after about an hour.</span><span class="actions"><button class="plain" data-act="later">Later</button><button class="fill" data-act="drive-connect">Reconnect</button></span></div>`;
+let acctT = 0, acctClash = null;
+const acctPending = () => { const st = acctSet(); return !!st && st.sky != null && !S.example && hasSky() && (!st.savedAt || meta().changedAt > st.savedAt); };
+function acctSoon(){
+  const st = acctSet();
+  if (!st || st.sky == null || !acctToken() || S.example || !navigator.onLine || acctClash) return;
+  clearTimeout(acctT);
+  acctT = setTimeout(async () => { if (!acctPending()) return; try { const r = await acctSave(); if (r.clash) render(); } catch(err){ if (err.signedOut) render(); } }, 3000);
+}
+function acctNote(){
+  const st = acctSet(); if (!st || S.example) return "";
+  if (!navigator.onLine) return `<div class="note"><span>📴 You're offline. Everything is saved on this device${acctPending() ? ", and your latest changes go to your Starmatic account when you're back online" : ""}.</span></div>`;
+  if (acctClash) return `<div class="note"><span>☁️ Your account has a newer copy of this sky${acctClash.device ? ` from ${esc(acctClash.device)}` : ""}. Nothing has been overwritten.</span><button class="fill" data-view="file">Choose</button></div>`;
+  if (!acctToken()) return `<div class="note"><span>☁️ This device was signed out of your Starmatic account, so changes stay here for now.</span><span class="actions"><button class="plain" data-act="acct-off">Turn off</button><button class="fill" data-act="acct-connect">Connect again</button></span></div>`;
   return "";
 }
-// The Google Drive part of the Save sheet.
-async function drivePanel(el, changed){
-  const st = driveSet(), again = () => drivePanel(el, changed);
-  const draw = (text, buttons) => { if (changed) changed(); el.innerHTML = `<p class="sub">${text}</p><div class="actions" style="justify-content:flex-start">${buttons.map(([id, label, fill]) => `<button class="${fill ? "fill" : "plain"}" data-d="${id}">${label}</button>`).join("")}</div>`;
-    const on = (id, fn) => { const b = el.querySelector(`[data-d="${id}"]`); if (b) b.onclick = async () => { b.disabled = true; try { await fn(b); } catch(err){ if (err.signedOut) return again(); el.querySelector("p").textContent = err.message; b.disabled = false; } }; };
-    on("connect", driveConnect);
-    on("off", () => { driveOff(); render(); again(); });
-    on("save", async () => { const r = await driveSave(false); if (r.clash) driveClash = r.clash; again(); });
-    on("force", async () => { await driveSave(true); render(); again(); });
-    on("open", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before opening the Google Drive copy"); driveSeen(there); openSky(sky); toast("☁️ Opened the sky from your Google Drive"); });
-    on("add", async () => { const there = driveClash || await driveLook(), sky = await driveRead(there); safeCopy("Before adding the Google Drive copy"); const n = mergeSky(sky); driveSeen(there); commit(); await driveSave(true); closeSheet(); toast(tally(n) ? `🌌 Added ${tally(n)}` : "☁️ Your sky already had everything in the Drive copy"); });
+// The account part of the Save sheet.
+async function acctPanel(el, changed){
+  const st = acctSet(), again = () => acctPanel(el, changed);
+  const draw = (text, buttons, extra = "") => {
+    if (changed) changed();
+    el.innerHTML = `<p class="sub">${text}</p>${extra}<div class="actions" style="justify-content:flex-start">${buttons.map(([id, label, fill]) => id === "manage" ? `<a class="plain btnlink" href="${esc(acctPage())}" target="_blank" rel="noopener">${label}</a>` : `<button class="${fill ? "fill" : "plain"}" data-a="${id}">${label}</button>`).join("")}</div><p class="err" data-a-err role="alert"></p>`;
+    el.querySelectorAll("[data-a]").forEach(b => { const id = b.dataset.a, fn = acts[id.split(":")[0]]; if (fn) b.onclick = async () => {
+      b.disabled = true; try { await fn(b, id.split(":")[1]); if (b.isConnected) b.disabled = false; } catch(err){ if (err.signedOut) return again(); el.querySelector("[data-a-err]").textContent = err.message; b.disabled = false; } }; });
   };
-  if (!st) return draw("Keep a copy of your sky in your own Google Drive and open it on your other devices. Starmatic can only see the one file it makes there, named “" + DRIVE_FILE + "”.", [["connect", "Connect Google Drive", true]]);
-  if (!driveToken()) return draw(`Paused${st.savedAt ? `: last saved to your Drive ${esc(when(st.savedAt))}` : ""}. Google signs this page out after about an hour.`, [["off", "Turn off"], ["connect", "Reconnect", true]]);
-  el.innerHTML = `<p class="sub">Checking your Drive…</p>`;
-  let there; try { there = driveClash || await driveLook(); } catch(err){ if (err.signedOut) return again(); return draw(esc(err.message), [["off", "Turn off"], ["connect", "Reconnect", true]]); }
-  if (!there){
-    if (!hasSky()) return draw("Connected. There's no sky in your Drive yet: it will be saved there once you start yours.", [["off", "Turn off"]]);
-    await driveSave(true); render(); return again();
+  const acts = {
+    connect: acctConnect,
+    off: b => armed(b, "Tap again to disconnect", () => { acctOff(); render(); again(); }),
+    save: async () => { await acctSave(); render(); again(); },
+    pick: async () => { acctPatch({sky:null}); again(); },
+    newsky: async () => { acctPatch({sky:0, rev:0}); await acctSave(); render(); again(); },
+    open: async (b, id) => { const go = async () => { await acctOpen(+id); }; return hasSky() && +id !== (acctSet() || {}).sky ? armed(b, "Tap again: this replaces the sky on this device", go) : go(); },
+    take: async () => { await acctOpen(acctClash.id); },
+    keep: async () => { await acctSave(acctClash.rev); render(); again(); },
+    add: async () => { const c = acctClash; safeCopy("Before adding your account's copy"); const n = mergeSky(readIncoming(JSON.stringify(c.data)).sky); commit(); await acctSave(c.rev); closeSheet(); render(); toast(tally(n) ? `🌌 Added ${tally(n)}` : "☁️ Your sky already had everything in your account's copy"); },
+  };
+  if (!st) return draw("Keep your skies in a free Starmatic account on voltarae.com and open them on any device. Your sky is still saved on this device too, and works offline.", [["connect", "Connect my account", true]],
+    `<p class="sub" style="margin-top:0">No account yet? You can make one on the next page: it takes a minute, with a code sent to your email.</p>`);
+  if (!acctToken()) return draw(`This device was signed out of your account${st.name ? ` (${esc(st.name)})` : ""}. Changes stay on this device until you connect again.`, [["off", "Turn off"], ["connect", "Connect again", true]]);
+  if (acctClash) return draw(`Your account has a copy of “${esc(acctClash.title)}” saved ${esc(when(acctClash.updated * 1000))}${acctClash.device ? ` from ${esc(acctClash.device)}` : ""} that this device hasn't opened. Nothing has been overwritten.`,
+    [["keep", "Keep this device's"], ["add", "Add it to my sky"], ["take", "Open the account's copy", true]]);
+  if (st.sky == null){
+    el.innerHTML = `<p class="sub">Looking at your account…</p>`;
+    let me; try { me = await acctFetch("me"); } catch(err){ if (err.signedOut) return again(); return draw(esc(err.message), [["off", "Turn off"], ["pick", "Try again", true]]); }
+    if (!me.skies.length){
+      if (hasSky()){ acctPatch({sky:0}); await acctSave(); render(); return again(); }
+      acctPatch({sky:0}); return draw(`Connected as ${esc(me.name)}. Your sky will be saved to your account once you start it.`, [["manage", "Manage my account ↗"], ["off", "Disconnect"]]);
+    }
+    const list = me.skies.map(s => `<li><span><b>${esc(s.title)}</b><br><span class="sub">${s.orbit ? `🤖 ${esc(s.orbit)} · ` : ""}${s.galaxies} galax${s.galaxies === 1 ? "y" : "ies"} · saved ${esc(when(s.updated * 1000))}</span></span><button class="fill" data-a="open:${s.id}">Open</button></li>`).join("");
+    return draw(`Connected as ${esc(me.name)}. Your account has ${me.skies.length} sk${me.skies.length === 1 ? "y" : "ies"}. Open one here${hasSky() ? ", or save the sky on this device as a new one" : ""}.`,
+      hasSky() ? [["newsky", "Save this sky as a new one"], ["off", "Disconnect"]] : [["off", "Disconnect"]], `<ul class="acct-list">${list}</ul>`);
   }
-  if (st.seen !== there.modifiedTime){            // a copy this browser hasn't opened: another device, or the first time here
-    driveClash = there;
-    return hasSky()
-      ? draw(`Your Drive has a sky saved ${esc(when(there.modifiedTime))} that this browser hasn't opened. Nothing has been overwritten.`, [["off", "Turn off"], ["force", "Replace it with this one"], ["add", "Add it to my sky"], ["open", "Open the Drive copy", true]])
-      : draw(`Your Drive has a sky saved ${esc(when(there.modifiedTime))}.`, [["off", "Turn off"], ["open", "Open the Drive copy", true]]);
-  }
-  draw(`Connected. Saved to your Drive ${esc(when(st.savedAt))}. Changes are sent a few seconds after you make them, until Google signs this page out (about an hour).`, [["off", "Turn off"], ["save", "Save now", true]]);
+  const pend = acctPending();
+  draw(`Connected as ${esc(st.name)}. This device saves to “${esc(st.title || S.goal.title || "My sky")}”${st.savedAt ? `, last saved ${esc(when(st.savedAt))}` : ""}.${pend ? " Your latest changes are waiting to go up." : ""} Changes are sent a few seconds after you make them.`,
+    [["save", "Save now", true], ["pick", "Switch sky"], ["manage", "Manage my account ↗"], ["off", "Disconnect"]]);
+}
+// At start, and when the connection comes back: is the account's copy newer than this device's?
+async function acctCheck(){
+  const st = acctSet();
+  if (!st || !st.sky || !acctToken() || !navigator.onLine) return;
+  try {
+    const there = await acctFetch(`skies/${st.sky}?meta=1`);
+    if (there.rev === st.rev){ if (acctPending()) acctSoon(); return; }
+    if (!acctPending() || !hasSky()) return acctOpen(st.sky);      // nothing new here: simply open the newer copy
+    acctClash = await acctFetch(`skies/${st.sky}`); render();
+  } catch(err){ if (err.status === 404){ acctPatch({sky:0}); if (hasSky()) acctSoon(); } else if (err.signedOut) render(); }
 }
 
 // ---------------- Save / open ----------------
@@ -1924,13 +1961,13 @@ function fileSheet(){
     <p class="sub" id="x-last" style="margin:0"></p>
     <label>Sky file<textarea id="x-text" rows="7" placeholder="Paste a saved file here to open it…">${esc(text)}</textarea></label>
     <label>Or open a .json file<input id="x-file" type="file" accept=".json,.txt,application/json,text/plain"></label>
-    ${driveOn() ? `<details ${driveSet() ? "open" : ""}><summary>☁️ Google Drive</summary><div id="x-drive"></div></details>` : ""}
+    <details ${acctSet() ? "open" : ""} id="x-acct-box"><summary>☁️ Starmatic account</summary><div id="x-acct"></div></details>
     <details id="x-hist"><summary>🕓 History</summary>
       <p class="sub">The last 30 copies of your sky are kept in this browser: one before anything is opened or added, and one about every ten minutes while you play. Bring one back if something goes wrong.</p>
       <div id="x-hist-list" class="sub"></div>
     </details>
     <details><summary>📲 Use it offline, like an app</summary>
-      <p class="sub">After one visit Starmatic opens with no connection, and everything you do offline is saved on this device.${driveOn() ? " With Google Drive connected, your changes are sent there when you're back online." : ""} To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
+      <p class="sub">After one visit Starmatic opens with no connection, and everything you do offline is saved on this device. With your Starmatic account connected, your changes are sent there when you're back online. To keep it on your home screen: on iPhone or iPad open it in Safari, tap Share, then Add to Home Screen. On Android or a computer, use your browser's Install or Add to Home screen.</p>
       <p class="sub">On iPhone and iPad the home-screen app starts with an empty sky of its own. Download your file here first, then open it in the app.</p>
       <div class="actions" style="justify-content:flex-start"><button class="plain" id="x-install" hidden>Install Starmatic</button></div>
     </details>
@@ -1953,7 +1990,7 @@ function fileSheet(){
     const last = () => { const m = meta(); card.querySelector("#x-last").textContent = !has ? "" : m.backupAt ? `Last backup: ${when(m.backupAt)} (${m.backupHow}).` : "No backup yet."; };
     last();
     card.querySelector("#x-hist").addEventListener("toggle", ev => { if (ev.target.open) historyList(card.querySelector("#x-hist-list")); });
-    if (driveOn()) drivePanel(card.querySelector("#x-drive"), last);
+    acctPanel(card.querySelector("#x-acct"), last);
     const inst = card.querySelector("#x-install");
     if (installEvt){ inst.hidden = false; inst.onclick = async () => { const ev = installEvt; installEvt = null; inst.hidden = true; try { await ev.prompt(); } catch(err){} }; }
     open.onclick = () => {
@@ -1970,7 +2007,7 @@ function fileSheet(){
 // one thing worth doing next. You feed her "snacks": short notes of what you learned, each filed under
 // a galaxy. She remembers them and quizzes you; every right answer is Orbit Tutor XP for that galaxy
 // (its own kind in the study log, up to TUTOR_CAP a day). Her own level, fuel and gear are just for fun.
-// Everything she knows lives in the sky (S.snacks, S.orbit), so it's in backups and Google Drive too.
+// Everything she knows lives in the sky (S.snacks, S.orbit), so it's in backups and your Starmatic account too.
 const TUTOR_CAP = 50, TUTOR_RIGHT = 5, TUTOR_DAILY = 10, FUEL_DRAIN = 15, DAILY_N = 5;
 const ORB_LEVELS = [0,40,100,180,280,400];
 const orbLevel = xp => { let l = 1; ORB_LEVELS.forEach((t,i) => { if (xp >= t) l = i+1; }); return l; };
@@ -1980,11 +2017,25 @@ const ORB_GEAR = [
   {id:"turbo", lv:4, name:"Turbo flame", say:"Blue flame! I'm twice as fast now."},
   {id:"star", lv:5, name:"Golden star", say:"A golden star! I feel like a supernova."},
 ];
+// Your star bot is Orbit until you give her another name (up to 24 letters).
+const orbName = n => String(n || "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 24);
+const ON = () => (S && S.orbit && S.orbit.name) || "Orbit";
+function orbNameSheet(){
+  if (S.example) return toast("Start your own sky first, then you can name your star bot.");
+  openSheet(`<p class="kick">Your star bot</p><h3>Name your star bot</h3>
+    <label>Name<input id="on-name" maxlength="24" value="${esc(S.orbit.name || "")}" placeholder="Orbit"></label>
+    <p class="sub" style="margin:0">Leave it empty to call her Orbit.</p>
+    <div class="actions"><button class="plain" data-close="1">Cancel</button><button class="fill" id="on-save">Save</button></div>`, card => {
+    const save = () => { const n = orbName(card.querySelector("#on-name").value); if (n) S.orbit.name = n; else delete S.orbit.name; commit(); closeSheet(); render(); toast(`🤖 Say hi to ${ON()}!`); };
+    card.querySelector("#on-save").onclick = save;
+    card.querySelector("#on-name").onkeydown = e => { if (e.key === "Enter") save(); };
+  });
+}
 function orbitBlank(){ return {xp:0, fuel:60, at:todayISO(), wear:[], streak:0, best:0, daily:{last:null, days:0}}; }
 function orbitFrom(o){
   const b = orbitBlank(); if (!o || typeof o !== "object") return b;
   const d = /^\d{4}-\d{2}-\d{2}$/;
-  return {xp:Math.max(0, Math.round(+o.xp||0)), fuel:Math.min(100, Math.max(0, Math.round(+o.fuel||0))), at: d.test(o.at||"") ? o.at : b.at,
+  return {...(orbName(o.name) ? {name:orbName(o.name)} : {}), xp:Math.max(0, Math.round(+o.xp||0)), fuel:Math.min(100, Math.max(0, Math.round(+o.fuel||0))), at: d.test(o.at||"") ? o.at : b.at,
     wear:(Array.isArray(o.wear) ? o.wear : []).filter(id => ORB_GEAR.some(g => g.id === id)),
     streak:Math.max(0, +o.streak||0), best:Math.max(0, +o.best||0),
     daily:{last: d.test(o.daily?.last||"") ? o.daily.last : null, days:Math.max(0, +o.daily?.days||0)}};
@@ -2120,13 +2171,13 @@ function orbTips(r){
     c.quests.filter(q => status(q) === "late").slice(0,2).forEach(q => tips.push({face:"oops", html:`Uh oh, <b>${esc(q.title)}</b> slipped past its date. Turn it in, and ask if late work still counts?`}));
     c.quests.filter(q => !q.done && q.due && q.due >= t && q.due <= wk).sort((a,b) => (s.impact[b.id]||0) - (s.impact[a.id]||0)).slice(0,2)
       .forEach(q => tips.push({face:"think", html:`<b>${esc(q.title)}</b> is due ${fmtDate(q.due)}${s.impact[q.id] ? `, and it's worth <b>${(s.impact[q.id]).toFixed(1)}%</b> of your grade` : ""}. Want to start it?`})); }
-  if (!S.snacks.length && S.galaxies.length) tips.push({face:"hungry", html:`I'm hungry for knowledge! Feed me a <b>snack</b> of something you learned, and I'll quiz you on it.`, btn:["feed","Feed Orbit"]});
+  if (!S.snacks.length && S.galaxies.length) tips.push({face:"hungry", html:`I'm hungry for knowledge! Feed me a <b>snack</b> of something you learned, and I'll quiz you on it.`, btn:["feed",`Feed ${esc(ON())}`]});
   const lastStudy = S.study.filter(e => e.kind !== "tutor").map(e => e.date).sort().pop();
   if (lastStudy && daysBetween(lastStudy, t) >= 3) tips.push({face:"sleepy", html:`I missed you! It's been ${daysBetween(lastStudy, t)} days since you logged study. Even 20 minutes counts.`});
   for (const g of S.galaxies){ const G = r.gx[g.id]; if (!G.locked && G.need && G.need - G.into <= Math.max(4, G.need/4) && G.level < 100)
     tips.push({face:"stars", html:`${esc(g.emoji)} <b>${esc(g.name)}</b> is only ${G.need - G.into} XP from level ${G.level+1}. A quick quiz could do it!`}); }
-  if (fuel < 30 && S.snacks.length) tips.push({face:"hungry", html:`My star fuel is at <b>${fuel}%</b>… Feed me something you learned today?`, btn:["feed","Feed Orbit"]});
-  if (!tips.length) tips.push({face:"happy", html: S.galaxies.length ? `Hi! Your sky is looking bright. Feed me what you learn and I'll help it stick.` : `Hi, I'm Orbit! Add a galaxy for a skill you're learning, then feed me snacks of what you learn.`});
+  if (fuel < 30 && S.snacks.length) tips.push({face:"hungry", html:`My star fuel is at <b>${fuel}%</b>… Feed me something you learned today?`, btn:["feed",`Feed ${esc(ON())}`]});
+  if (!tips.length) tips.push({face:"happy", html: S.galaxies.length ? `Hi! Your sky is looking bright. Feed me what you learn and I'll help it stick.` : `Hi, I'm ${esc(ON())}! Add a galaxy for a skill you're learning, then feed me snacks of what you learn.`});
   return tips;
 }
 let orbTalkI = 0, orbFaceT = null;
@@ -2143,11 +2194,11 @@ function orbSay(html, btn){
 }
 function orbCard(r){
   const tip = orbTips(r)[0];
-  return `<section class="orb-stage mini" aria-label="Orbit, your star bot">
+  return `<section class="orb-stage mini" aria-label="${esc(ON())}, your star bot">
     <div class="stars"></div>
-    <div id="orb-bot" class="orb-bot" role="img" aria-label="Orbit, a pixel-art space robot">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
+    <div id="orb-bot" class="orb-bot" role="img" aria-label="${esc(ON())}, a pixel-art space robot">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
     <div class="orb-side"><div class="orb-bubble" id="orb-say"><div>${tip.html}</div>${tip.btn ? `<button class="gold" data-orb="${tip.btn[0]}">${esc(tip.btn[1])}</button>` : ""}</div>
-      <div class="orb-acts"><button data-orb="talk">Talk</button><button data-orb="open">Visit Orbit</button></div></div>
+      <div class="orb-acts"><button data-orb="talk">Talk</button><button data-orb="open">Visit ${esc(ON())}</button></div></div>
   </section>`;
 }
 
@@ -2156,7 +2207,7 @@ let orbTab = "feed", orbType = "fact", orbImg = null, sess = null, lastAsked = n
 function orbStatsHTML(){
   const o = S.orbit, lv = orbLevel(o.xp), lo = ORB_LEVELS[lv-1], hi = ORB_LEVELS[lv] ?? lo, fuel = orbFuel(), tut = tutorToday();
   const segs = (pct, cls) => `<div class="orb-segs ${cls}">${Array.from({length:10}, (_,i) => `<i class="${i < Math.round(pct/10) ? "on" : ""}"></i>`).join("")}</div>`;
-  return `<div class="orb-name"><h3>Orbit</h3><span class="lv">LV ${lv}</span></div>
+  return `<div class="orb-name"><h3>${esc(ON())} <button class="orb-rename" data-orb="name" aria-label="Rename your star bot" title="Rename">✏️</button></h3><span class="lv">LV ${lv}</span></div>
     <div class="orb-meter"><div class="lab"><span>Star fuel</span><span class="num">${fuel}%</span></div>${segs(fuel, "fuel" + (fuel < 30 ? " low" : ""))}</div>
     <div class="orb-meter"><div class="lab"><span>Bot XP</span><span class="num">${hi > lo ? `${o.xp} / ${hi}` : `${o.xp} · max`}</span></div>${segs(hi > lo ? (o.xp-lo)/(hi-lo)*100 : 100, "xp")}</div>
     <div class="orb-meter"><div class="lab"><span>Orbit Tutor XP today</span><span class="num" id="orb-tut">${tut} / ${TUTOR_CAP}</span></div>${segs(tut/TUTOR_CAP*100, "tutor")}</div>
@@ -2166,16 +2217,16 @@ function orbRestat(){ const el = $("#orb-stats"); if (el) el.innerHTML = orbStat
 function orbitView(r){
   const tip = orbTips(r)[0], done = S.orbit.daily.last === todayISO();
   const tabs = [["feed","Feed", SNACK.fact.spr],["quiz","Quiz", ORB_ICON.quiz],["pantry","Pantry", SNACK.list.spr],["gear","Gear", ORB_ICON.gear]];
-  return `<section class="orb-stage" aria-label="Orbit, your star bot">
+  return `<section class="orb-stage" aria-label="${esc(ON())}, your star bot">
       <div class="stars"></div>
-      <div class="orb-botbox"><div id="orb-bot" class="orb-bot" role="img" aria-label="Orbit, a pixel-art space robot with a screen face and a star on her antenna">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
+      <div class="orb-botbox"><div id="orb-bot" class="orb-bot" role="img" aria-label="${esc(ON())}, a pixel-art space robot with a screen face and a star on her antenna">${orbSVG({face:tip.face, pose:"wave", gear:S.orbit.wear})}</div>
         <div class="orb-bubble" id="orb-say"><div>${tip.html}</div>${tip.btn && tip.btn[0] !== "feed" ? `<button class="gold" data-orb="${tip.btn[0]}">${esc(tip.btn[1])}</button>` : ""}</div></div>
       <div class="orb-side"><div id="orb-stats" style="display:flex;flex-direction:column;gap:.7rem">${orbStatsHTML()}</div>
         <div class="orb-acts"><button class="gold" data-orb="daily">${done ? "Daily quiz ✓" : "Daily quiz"}</button><button data-orb="talk">Talk</button></div></div>
       <div class="orb-crumbs" id="orb-crumbs"></div>
     </section>
     <div class="orb-tabs" role="tablist">${tabs.map(([k,n,spr]) => `<button class="tab" role="tab" data-orbtab="${k}" aria-selected="${k===orbTab}" aria-pressed="${k===orbTab}">${gridSVG(spr)}${n}</button>`).join("")}</div>
-    <section class="box orb-panel" id="orb-panel">${!S.galaxies.length ? `<div class="empty"><h3>🌌 Orbit needs a galaxy first</h3><p style="margin:0">Snacks are filed under the galaxies in your sky. Add one for a skill you're learning, then come back and feed Orbit.</p><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button></div>`
+    <section class="box orb-panel" id="orb-panel">${!S.galaxies.length ? `<div class="empty"><h3>🌌 ${esc(ON())} needs a galaxy first</h3><p style="margin:0">Snacks are filed under the galaxies in your sky. Add one for a skill you're learning, then come back and feed ${esc(ON())}.</p><button class="teal" data-act="new-galaxy">＋ Add a galaxy</button></div>`
       : orbTab === "feed" ? feedHTML() : orbTab === "pantry" ? pantryHTML() : orbTab === "gear" ? gearHTML() : `<div class="box-head"><h3 id="orb-qtitle">Quiz</h3></div><div id="orb-quiz" class="orb-quiz"></div>`}</section>`;
 }
 
@@ -2192,16 +2243,16 @@ const FORM = {
 };
 function feedHTML(){
   const f = FORM[orbType];
-  return `<div class="box-head"><h3><span class="e">🍪</span>Feed Orbit</h3><span class="sub">Notes from class, work or a video. Each snack is filed under a galaxy.</span></div>
+  return `<div class="box-head"><h3><span class="e">🍪</span>Feed ${esc(ON())}</h3><span class="sub">Notes from class, work or a video. Each snack is filed under a galaxy.</span></div>
     <div class="orb-types">${SNACK_TYPES.map(k => `<button class="orb-type" data-otype="${k}" aria-pressed="${k===orbType}">${gridSVG(SNACK[k].spr)}<b>${SNACK[k].name}</b><small>${SNACK[k].what}</small></button>`).join("")}</div>
     <div class="row"><label>Galaxy<select id="o-gal">${S.galaxies.map(g => `<option value="${esc(g.id)}">${esc(g.emoji)} ${esc(g.name)}</option>`).join("")}</select></label>
       <label>${f.t}<input id="o-title" autocomplete="off" placeholder="${esc(f.tp)}"></label></div>
     ${f.date ? `<label>When<input id="o-date" type="date"></label>` : ""}
     ${f.pic ? `<label>Picture<input id="o-pic" type="file" accept="image/*"><img id="o-prev" class="orb-pic" alt="" hidden></label>` : ""}
     ${f.date ? "" : `<label>${f.b}<textarea id="o-body" rows="${["list","steps"].includes(orbType) ? 6 : orbType === "formula" ? 3 : 2}" placeholder="${esc(f.bp)}"></textarea></label>`}
-    <p class="sub" style="margin:0">${f.h}</p>
+    <p class="sub" style="margin:0">${esc(f.h.replace(/Orbit/g, ON()))}</p>
     <div id="o-err" class="err" role="alert"></div>
-    <div class="actions" style="justify-content:flex-start"><button class="teal" id="o-feed">Feed Orbit</button></div>`;
+    <div class="actions" style="justify-content:flex-start"><button class="teal" id="o-feed">Feed ${esc(ON())}</button></div>`;
 }
 const cleanLine = l => l.replace(/^\s*(?:[-–—•*·▪◦●>]|\d{1,2}[.)]|[a-z][.)])\s+/i, "").trim();
 function feedMount(){
@@ -2210,7 +2261,7 @@ function feedMount(){
     const lines = body.value.split("\n").filter(l => l.trim()); if (lines.length < 2) return;
     const t = lines.every(l => /^\s*\d{1,2}[.)]/.test(l)) ? "steps" : lines.every(l => /^\s*[-–—•*·▪◦●]/.test(l)) ? "list" : null;
     if (t && t !== orbType){ const keep = [title.value, body.value, $("#o-gal").value]; orbType = t; $("#orb-panel").innerHTML = feedHTML(); feedMount();
-      $("#o-title").value = keep[0]; $("#o-body").value = keep[1]; $("#o-gal").value = keep[2]; $("#o-err").className = "sub"; $("#o-err").textContent = `That looks like ${t === "steps" ? "steps" : "a list"}, so Orbit made it ${SNACK[t].name}.`; }
+      $("#o-title").value = keep[0]; $("#o-body").value = keep[1]; $("#o-gal").value = keep[2]; $("#o-err").className = "sub"; $("#o-err").textContent = `That looks like ${t === "steps" ? "steps" : "a list"}, so ${ON()} made it ${SNACK[t].name}.`; }
   }));
   title.addEventListener("blur", () => {
     const m = title.value.match(/^([^:=]{2,60})\s*[:=–—]\s*(.{3,})$/);
@@ -2227,7 +2278,7 @@ function feedMount(){
       orbImg = c.toDataURL("image/jpeg", .75); URL.revokeObjectURL(url);
       $("#o-prev").src = orbImg; $("#o-prev").hidden = false;
     };
-    img.onerror = () => { err.textContent = "Orbit couldn't open that picture. Try a photo or a screenshot."; };
+    img.onerror = () => { err.textContent = `${ON()} couldn't open that picture. Try a photo or a screenshot.`; };
     img.src = url;
   };
   $("#o-feed").onclick = () => {
@@ -2235,7 +2286,7 @@ function feedMount(){
     const nope = m => { err.className = "err"; err.textContent = m; orbMood("oops","idle",1500,"shake"); };
     if (!name) return nope(`Give your ${SNACK[orbType].name} a ${FORM[orbType].t.toLowerCase()} first.`);
     const s = {id:newId(), type:orbType, galaxy:$("#o-gal").value, title:name, box:0, made:todayISO()};
-    if (orbType === "list" || orbType === "steps"){ if (lines.length < 2) return nope("Add at least two lines so Orbit has something to quiz you on."); s.items = lines; }
+    if (orbType === "list" || orbType === "steps"){ if (lines.length < 2) return nope(`Add at least two lines so ${ON()} has something to quiz you on.`); s.items = lines; }
     else if (orbType === "date"){ const d = $("#o-date").value; if (!d) return nope("Pick when it happened."); s.date = d; }
     else if (orbType === "picture"){ if (!orbImg) return nope("Choose a picture first."); s.img = orbImg; s.body = raw.replace(/\s*\n\s*/g, " "); }
     else if (orbType === "formula"){ if (!raw) return nope("Add the formula too."); const [f, ...rest] = raw.split("\n"); s.body = f.trim(); s.note = rest.join(" ").trim(); }
@@ -2271,7 +2322,7 @@ function snackBody(s){
 function pantryHTML(){
   const groups = [...S.galaxies.map(g => [g, S.snacks.filter(s => s.galaxy === g.id)]), [null, S.snacks.filter(s => !gById(s.galaxy))]].filter(([g, l]) => g || l.length);
   const tut = id => S.study.filter(e => e.kind === "tutor" && e.galaxy === id).reduce((n,e) => n + (+e.xp||0), 0);
-  return `<div class="box-head"><h3><span class="e">🍱</span>Pantry</h3><span class="sub">Every snack you've fed Orbit. The stars show how well you remember each one.</span></div>
+  return `<div class="box-head"><h3><span class="e">🍱</span>Pantry</h3><span class="sub">Every snack you've fed ${esc(ON())}. The stars show how well you remember each one.</span></div>
     ${groups.map(([g, list]) => `<div style="display:flex;flex-direction:column;gap:.5rem"><p class="kick">${g ? `${esc(g.emoji)} ${esc(g.name)} · ${list.length} snack${list.length === 1 ? "" : "s"} · ${tut(g.id)} Orbit Tutor XP` : "⚠️ No galaxy"}</p>
       ${list.length ? list.map(s => `<div class="orb-snack">${gridSVG(SNACK[s.type].spr)}<div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="b">${snackBody(s)}</div></div>
         <div class="end">${memStars(s.box)}<button class="plain" data-snackdel="${esc(s.id)}">Remove</button></div></div>`).join("") : `<p class="sub" style="margin:0">Nothing here yet.</p>`}</div>`).join("")}`;
@@ -2284,7 +2335,7 @@ function pantryMount(){
 // ---- Gear ----
 function gearHTML(){
   const lv = orbLevel(S.orbit.xp);
-  return `<div class="box-head"><h3><span class="e">🛰️</span>Gear</h3><span class="sub">Orbit earns gear as she levels up from snacks and quizzes.</span></div>
+  return `<div class="box-head"><h3><span class="e">🛰️</span>Gear</h3><span class="sub">${esc(ON())} earns gear as she levels up from snacks and quizzes.</span></div>
     <div class="orb-gear">${ORB_GEAR.map(g => { const open = lv >= g.lv, on = S.orbit.wear.includes(g.id);
       return `<div class="orb-item ${open ? "" : "locked"}"><div class="pic">${orbSVG({gear:[g.id]})}</div><b>${g.name}</b>${open ? `<button data-gear="${g.id}" class="${on ? "fill" : ""}">${on ? "Wearing" : "Put on"}</button>` : `<small>Unlocks at level ${g.lv}</small>`}</div>`; }).join("")}</div>`;
 }
@@ -2312,7 +2363,7 @@ function startDaily(){
     Q.innerHTML = `<p class="qq">You did today's quiz already. Day streak: ${S.orbit.daily.days}.</p><p class="sub" style="margin:0">Come back tomorrow for new questions, or keep practicing now.</p><div class="actions" style="justify-content:flex-start"><button class="fill" id="orb-more">Keep practicing</button></div>`;
     $("#orb-more").onclick = startFree; return;
   }
-  if (!S.snacks.length){ Q.innerHTML = `<p class="qq">Feed Orbit a few snacks first, and she'll make you a quiz.</p>`; return; }
+  if (!S.snacks.length){ Q.innerHTML = `<p class="qq">Feed ${esc(ON())} a few snacks first, and she'll make you a quiz.</p>`; return; }
   sess = {mode:"daily", list:dailyPicks(), n:0, marks:[]};
   orbMood("wow","cheer",1200,"hop"); orbSay(`Daily quiz! <b>${sess.list.length} question${sess.list.length === 1 ? "" : "s"}</b>. Let's light up some stars.`);
   ask();
@@ -2347,7 +2398,7 @@ function inOrder(s, Q, head, qHtml, items, after){
     const i = +b.dataset.oi;
     if (i === order.length){
       slots[i].textContent = items[i]; slots[i].classList.add("filled"); order.push(i); b.disabled = true; b.classList.add("used");
-      if (order.length === items.length){ if (after) after(slots); result(s, miss === 0, Q, miss ? `All in order, with ${miss} wrong tap${miss > 1 ? "s" : ""}. Orbit will bring this one back soon.` : null); }
+      if (order.length === items.length){ if (after) after(slots); result(s, miss === 0, Q, miss ? `All in order, with ${miss} wrong tap${miss > 1 ? "s" : ""}. ${ON()} will bring this one back soon.` : null); }
     } else {
       miss++; b.classList.add("wrong"); setTimeout(() => b.classList.remove("wrong"), 400); orbMood("oops","think",700,"shake");
       const fb = Q.querySelector(".orb-fb"); fb.textContent = "Not that one yet…"; fb.className = "orb-fb bad";
@@ -2357,7 +2408,7 @@ function inOrder(s, Q, head, qHtml, items, after){
 function ask(){
   const Q = $("#orb-quiz"); if (!Q) return;
   const s = pickSnack();
-  if (!s){ Q.innerHTML = `<p class="qq">No snacks yet. Feed Orbit one first!</p>`; return; }
+  if (!s){ Q.innerHTML = `<p class="qq">No snacks yet. Feed ${esc(ON())} one first!</p>`; return; }
   lastAsked = s.id;
   if (sess.mode !== "daily") orbMood("think","think");
   const g = gById(s.galaxy);
@@ -2395,7 +2446,7 @@ function selfGrade(s, Q, head, q, answer){
     $("#orb-knew").onclick = () => result(s, true, Q); $("#orb-not").onclick = () => result(s, false, Q);
   };
 }
-const CHEERS = ["Nailed it!","Stellar!","Orbit approves!","Supernova brain!","Right on target!"];
+const CHEERS = ["Nailed it!","Stellar!","__BOT__ approves!","Supernova brain!","Right on target!"];
 function result(s, ok, Q, note){
   const fb = Q.querySelector(".orb-fb"), o = S.orbit, g = gById(s.galaxy);
   let up;
@@ -2403,13 +2454,13 @@ function result(s, ok, Q, note){
     s.box = Math.min(3, s.box + 1); o.streak++; o.best = Math.max(o.best, o.streak);
     const t = tutorAdd(s.galaxy, TUTOR_RIGHT);
     fb.className = "orb-fb good";
-    fb.textContent = `${CHEERS[Math.floor(Math.random()*CHEERS.length)]} ${t ? `+${t} Orbit Tutor XP${g ? ` for ${g.name}` : ""}.` : g ? `Today's ${TUTOR_CAP} Orbit Tutor XP are all earned.` : ""}${o.streak >= 3 ? ` Streak ×${o.streak}!` : ""}`;
+    fb.textContent = `${CHEERS[Math.floor(Math.random()*CHEERS.length)].replace("__BOT__", ON())} ${t ? `+${t} Orbit Tutor XP${g ? ` for ${g.name}` : ""}.` : g ? `Today's ${TUTOR_CAP} Orbit Tutor XP are all earned.` : ""}${o.streak >= 3 ? ` Streak ×${o.streak}!` : ""}`;
     orbMood(o.streak >= 3 ? "stars" : "wow", "cheer", 1800, "hop");
     orbSay(o.streak >= 3 ? `${o.streak} in a row! You're on fire.` : `Yes! That one's sticking.${s.box >= 3 ? " Fully remembered!" : ""}`);
     up = orbGain(15 + Math.min(10, (o.streak-1)*2), 8);
   } else {
     s.box = 0; o.streak = 0;
-    fb.className = "orb-fb bad"; fb.textContent = note || "Not quite. Orbit will bring this one back soon.";
+    fb.className = "orb-fb bad"; fb.textContent = note || `Not quite. ${ON()} will bring this one back soon.`;
     orbMood("oops","idle",1800,"shake"); orbSay(`No worries, I'll ask about <b>${esc(s.title)}</b> again soon.`);
     up = orbGain(3, 4);
   }
@@ -2449,7 +2500,7 @@ function orbitMount(daily){
   else if (orbTab === "quiz" && $("#orb-quiz")){
     if (daily) startDaily();
     else if (sess && sess.mode === "daily"){
-      // the page was redrawn mid-quiz (a Google Drive notice, going offline): pick up where it was, never asking an answered question twice
+      // the page was redrawn mid-quiz (an account notice, going offline): pick up where it was, never asking an answered question twice
       $("#orb-qtitle").textContent = "Daily quiz";
       if (sess.marks[sess.n] !== undefined){ if (sess.n === sess.list.length - 1) return finishDaily(); sess.n++; }
       ask();
@@ -2466,6 +2517,7 @@ document.addEventListener("click", e => {
   else if (a === "open") orbGo(S.snacks.length ? "quiz" : "feed");
   else if (a === "daily") orbGo("quiz", true);
   else if (a === "feed") orbGo("feed");
+  else if (a === "name") orbNameSheet();
 });
 
 // ---------------- Taps ----------------
@@ -2486,7 +2538,8 @@ document.addEventListener("click", e => {
   if (b.dataset.study){ const s = S.study.find(x => x.id === b.dataset.study); if (s) studySheet(s, false); return; }
   const a = b.dataset.act;
   if (a === "later"){ setMeta({nudgedOn:todayISO()}); render(); return; }
-  if (a === "drive-connect") return driveConnect();
+  if (a === "acct-connect") return acctConnect();
+  if (a === "acct-off"){ acctOff(); render(); return; }
   if (a === "own") ensureOwn(() => { view = "sky"; render(); galaxyEdit(null); });
   else if (a === "goal") goalSheet();
   else if (a === "new-galaxy") galaxyEdit(null);
@@ -2505,20 +2558,27 @@ let bannerT; function banner(big, small){ const b = $("#banner"); b.innerHTML = 
 
 // ---------------- Start ----------------
 (function start(){
-  const back = driveReturn();            // "connected" when the page has just come back from Google
+  const back = acctReturn(), asked = acctAsked();   // back: "connected" when the page has just come back from voltarae.com
   S = load() || exampleSky();
   if (!S.example && !S.goal.title && !S.galaxies.length && S.courses.length) view = "classes";
   before = snapshot();
   drawScene();
   render();
   if (S.example) safeRescue();
-  if (back === "connected") fileSheet();
-  else if (back === "refused") toast("Google Drive wasn't connected.");
-  else if (driveSet() && driveToken() && hasSky()) driveLook().then(there => { if (there && there.modifiedTime !== driveSet().seen){ driveClash = there; render(); } else if (drivePending()) driveSoon(); }).catch(() => {});
+  const wanted = back === "connected" && (acctSet() || {}).rev === -1 ? acctSet().sky : 0;   // connected from the account page's Play button
+  if (wanted){ acctPatch({sky:null, rev:0}); acctOpen(wanted).catch(err => { toast(err.message); fileSheet(); }); }
+  else if (back === "connected" && !asked){ fileSheet(); if ((acctSet() || {}).sky) acctCheck(); }
+  else if (asked && acctToken()){
+    const st = acctSet() || {};
+    const go = () => acctOpen(asked).catch(err => { if (err.signedOut) render(); toast(err.message); });
+    if (st.sky === asked) acctCheck(); else if (acctPending()) acctSave().then(go, go); else go();
+  }
+  else if (asked){ acctPatch({sky:asked, rev:-1}); acctConnect(); }   // not connected here yet: connect, then open that sky
+  else acctCheck();
 })();
 // Losing and finding the connection. The sky is saved on this device either way.
 addEventListener("offline", () => { render(); toast("📴 Offline. Everything still saves on this device."); });
-addEventListener("online", () => { render(); if (drivePending() && !driveClash){ driveSoon(); if (driveToken()) toast("☁️ Back online. Sending your changes to Google Drive."); } });
+addEventListener("online", () => { render(); if (acctSet() && acctToken() && !acctClash){ acctCheck(); if (acctPending()) toast("☁️ Back online. Sending your changes to your Starmatic account."); } });
 
 </script>
 </body>
